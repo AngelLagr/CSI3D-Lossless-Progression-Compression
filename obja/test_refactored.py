@@ -21,15 +21,8 @@ import numpy as np
 # CONSTANTS AND ENUMERATIONS
 # ============================================================================
 
-class VertexState(IntEnum):
-    """Vertex states during the conquest process."""
-    FREE = 0        # Not yet processed
-    CONQUERED = 1   # On the conquest boundary
-    TO_REMOVE = 2   # Scheduled for removal (decimation)
-
-
-class FaceState(IntEnum):
-    """Face states during the conquest process."""
+class StateFlag(IntEnum):
+    """States during the conquest process."""
     FREE = 0        # Not yet processed
     CONQUERED = 1   # Processed (part of coarse mesh)
     TO_REMOVE = 2   # Will be removed (part of a patch)
@@ -249,8 +242,8 @@ class AllieeDesbrunEncoder:
         self.topology = MeshTopology(model)
         
         # State tracking as per paper's algorithm description
-        self.vertex_state = [VertexState.FREE] * len(model.vertices)
-        self.face_state = [FaceState.FREE] * len(model.faces)
+        self.vertex_state = [StateFlag.FREE] * len(model.vertices)
+        self.face_state = [StateFlag.FREE] * len(model.faces)
         self.vertex_tag = [VertexTag.UNDEF] * len(model.vertices)
         
         # Output: sequence of valence codes (integers) or 'N' for null patches
