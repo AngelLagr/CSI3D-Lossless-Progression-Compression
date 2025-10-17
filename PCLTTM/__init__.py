@@ -1,7 +1,7 @@
-import constants
-import data_structures
+import PCLTTM.data_structures.constants as constants
+from data_structures import *
 import mesh
-import obja  
+import PCLTTM.obja_parser as obja_parser  
 
 from typing import List, Tuple, Optional, Set, Dict, override
 
@@ -10,7 +10,7 @@ from typing import List, Tuple, Optional, Set, Dict, override
 # ALGORITHM IMPLEMENTATION
 # ============================================================================
 
-class PCLTTM(obja.Model):
+class PCLTTM(obja_parser.Model):
     """
     Implements the valence-driven conquest algorithm from Alliez-Desbrun 2001.
     """
