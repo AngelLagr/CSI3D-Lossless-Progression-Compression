@@ -1,39 +1,3 @@
-import collections
-import math
-import struct
-import zlib
-from typing import List, Tuple, Optional, Set, Dict, override
-from enum import IntEnum
-
-import obja  
-import numpy as np
-
-
-# ============================================================================
-# CONSTANTS AND ENUMERATIONS
-# ============================================================================
-
-class StateFlag(IntEnum):
-    """States during the conquest process."""
-    Free = 0        # Not yet processed
-    Conquered = 1   # Processed (part of coarse mesh)
-    ToRemove = 2   # Will be removed (part of a patch)
-
-
-class VertexTag(IntEnum):
-    """Tags for boundary vertices to enable deterministic retriangulation."""
-    Default = 0
-    Plus = 1   # '+' tag
-    Minus = 2  # '-' tag
-
-class PCLTTMConstants:
-    # Valence constraints for decimation and cleaning passes
-    MIN_VALENCE_DECIMATION = 3
-    MAX_VALENCE_DECIMATION = 6
-    VALENCE_CLEANING = 3
-
-
-
 # ============================================================================
 # DATA STRUCTURES
 # ============================================================================
@@ -49,6 +13,9 @@ class Vertex:
 
     def valence(self) -> int:
         return len(self.adjacent_faces)
+    
+    def generate_patch(self):
+        return None
     
 class Face:
     def __init__(self, index: int, vertices: Tuple[int, int, int]):
@@ -86,8 +53,6 @@ class DecimationCode:
         else:
             self.valence_code = 3
 
-
-
     def _target(self) -> Face|Vertex:
         if self.target_vertex != -1:
             return self.target_vertex
@@ -104,48 +69,3 @@ class FrenetCoordinates:
 
     def apply(self, alpha: int, beta: int, gamma: int) -> np.ndarray:
         return (self.tangent_x * alpha, self.tangent_y * beta, self.normal_z * gamma)
-
-# ============================================================================
-# ALGORITHM IMPLEMENTATION
-# ============================================================================
-
-class PCLTTM(obja.Model):
-    """
-    Implements the valence-driven conquest algorithm from Alliez-Desbrun 2001.
-    """
-    def __init__(self, model):
-        #example: self.gates = []
-        pass
-
-    @override
-    def parse_line(self, line: str):
-        pass
-    
-    
-    def vertex_removal(self):
-        _retriangulate_patch([], {})
-        pass
-
-
-    def _retriangulate_patch(boundary_vertices: List[int], tags: Dict[int, VertexTag]) -> List[Tuple[int, int, int]]:
-        """
-        Deterministic retriangulation of a patch polygon.
-        
-        According to the paper (Section 3.5 Fig.9):
-        - Uses tag-based method to ensure encoder/decoder produce same triangulation
-        - Tags (+/-) are assigned to boundary vertices during conquest
-        - The retriangulation is deterministic based on valence and tags
-        
-        Args:
-            boundary_vertices: Ordered list of vertices on patch boundary (CCW)
-            tags: Dictionary mapping vertex indices to their tags (PLUS/MINUS)
-        
-        Returns:
-            List of faces (triplets of vertex indices) forming the triangulation
-        """
-        n = len(boundary_vertices)
-        if n < 3:
-            return 
-        
-        
-
