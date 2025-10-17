@@ -16,6 +16,5 @@ class Vertex():
     def generate_patch(self):
         return None
 
-    @override    
-    def __key(self):
-        return self.position
+    def __hash__(self):
+        return hash(self.position)

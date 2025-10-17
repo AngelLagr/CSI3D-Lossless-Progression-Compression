@@ -1,3 +1,4 @@
+from typing import List, Tuple
 from data_structures import Vertex, Face, Gate, Patch
 
 from obja_parser import ObjaReader, ObjaWriter
@@ -21,41 +22,112 @@ class MeshTopology:
         reader = ObjaReader()
         mesh = MeshTopology()
         for elem in reader.parse_file(file_path):
-            pass
+            if isinstance(elem, Vertex):
+                mesh.add_vertex(elem)
+            elif isinstance(elem, Face):
+                for edge in elem.edges():
+                    mesh.add_edge(*edge)
         return mesh
 
     def __init__(self, model):
-        self.vertex_faces = None  # For each vertex, list of incident face indices
-        self.edge_to_face = None  # Maps oriented edge to face index
-        self.face_adjacency = None  # For each face, set of adjacent faces
+        self.vertex_connections = dict()
+        self.retriangulation_tags = dict()
+        self.state_flags = dict()
+        pass
+
+
+    def add_vertex(self, x, y, z, connected_to: List[Vertex]):
+        self.add_vertex(Vertex((x, y, z)), connected_to)
+
+    def add_vertex(self, vertex: Vertex, connected_to: List[Vertex]):
+        if vertex not in self.vertex_connections:
+            self.vertex_connections[vertex] = set()
+            for conn in connected_to:
+                self.add_edge(vertex, conn)
+
+    def can_remove_vertex(self, vertex: Vertex) -> bool:
+        if vertex not in self.vertex_connections:
+            return False
+        return all(len(self.vertex_connections[neighbor]) > 3 for neighbor in self.vertex_connections[vertex])
+    
+    def remove_vertex(self, vertex: Vertex, force: bool = False):
+        if self.can_remove_vertex(vertex) is False and not force:
+            return
         
-        self._compute_topology()
+        for neighbor in self.vertex_connections[vertex]:
+            self.vertex_connections[neighbor].remove(vertex)
+        del self.vertex_connections[vertex]
 
+    def add_edge(self, fromV: Vertex, toV: Vertex):
+        if fromV not in self.vertex_connections or toV not in self.vertex_connections:
+            return
+        
+        self.vertex_connections[fromV].add(toV)
+        self.vertex_connections[toV].add(fromV)
 
-    def add_vertex(x, y, z, connected_to):
-        pass
-    def can_remove_vertex(vertex: Vertex) -> bool:
-        return False
-    def remove_vertex(vertex: Vertex):
-        pass
+    def can_remove_edge(self, fromV: Vertex, toV: Vertex) -> bool:
+        return (fromV in self.vertex_connections and
+                toV in self.vertex_connections[fromV] and
+                len(self.vertex_connections[fromV]) > 3 and
+                len(self.vertex_connections[toV]) > 3)
+    
+    def remove_edge(self, fromV: Vertex, toV: Vertex, force: bool = False):
+        if self.can_remove_edge(fromV, toV) is False and not force:
+            return
+        
+        self.vertex_connections[fromV].remove(toV)
+        self.vertex_connections[toV].remove(fromV)
 
-    def add_edge(fromV: Vertex, toV: Vertex):
-        pass
-    def remove_edge(fromV: Vertex, toV: Vertex):
-        pass
-    def remove_edge(gate: Gate):
-        pass
+    def remove_edge(self, gate: Gate):
+        self.remove_edge(gate.edge[0], gate.edge[1])
 
-    def set_retriangulation_tag(vertex: Vertex, tag):
-        pass
-    def set_vertex_state(vertex: Vertex, flag):
-        pass
-    def set_face_state(face: Face, flag):
-        pass
+    def set_retriangulation_tag(self, vertex: Vertex, tag):
+        if vertex in self.vertex_connections:
+            self.retriangulation_tags[vertex] = tag
 
-    def get_patch(vertex: Vertex) -> Patch:
-        pass
-    def get_patch(gate: Gate) -> Patch:
-        pass
-    def get_facing_vertex(gate: Gate) -> Vertex:
-        pass
+    def set_vertex_state(self, vertex: Vertex, flag):
+        if vertex in self.vertex_connections:
+            self.state_flags[vertex] = flag
+
+    def set_face_state(self, face: Face, flag):
+        if all(v in self.vertex_connections for v in face.vertices):
+            self.state_flags[face] = flag
+
+    def get_faces(self, vertex: Vertex) -> List[Face]:
+        if vertex not in self.vertex_connections:
+            return []
+        faces = []
+        seen = set()
+        neighbors = self.vertex_connections[vertex]
+        for a in neighbors:
+            common_neighbors = neighbors.intersection(self.vertex_connections.get(a, set()))
+            for b in common_neighbors:
+                key = frozenset((vertex, a, b))
+                if key in seen:
+                    continue
+                seen.add(key)
+                faces.append(Face([vertex, a, b]))
+        return faces
+
+    def get_faces(self, edge: Tuple[Vertex, Vertex]) -> List[Face]:
+        v1, v2 = edge
+        if v1 not in self.vertex_connections or v2 not in self.vertex_connections:
+            return []
+        common_neighbors = self.vertex_connections[v1].intersection(self.vertex_connections[v2])
+        return [Face([v1, v2, n]) for n in common_neighbors]
+
+    def get_patch(self, vertex: Vertex) -> Patch:
+        if vertex not in self.vertex_connections:
+            return None
+        faces = self.get_faces(vertex)
+        return Patch(vertex, faces)
+    
+    def get_patch(self, gate: Gate) -> Patch:
+        return self.get_patch(gate.front_vertex)
+    
+    def get_shared_neighbours(self, edge: Tuple[Vertex, Vertex]) -> List[Vertex]:
+        if edge[0] not in self.vertex_connections or edge[1] not in self.vertex_connections:
+            return []
+        
+        v_left, v_right = edge
+        return self.vertex_connections[v_left].intersection(self.vertex_connections[v_right])
