@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Set, Tuple
 from data_structures import Vertex, Face, Gate, Patch
 
 from obja_parser import ObjaReader, ObjaWriter
@@ -10,11 +10,7 @@ from obja_parser import ObjaReader, ObjaWriter
 """
     Manages mesh topology information: valences, adjacency, neighborhoods.
     
-    This class precomputes and maintains:
-    - Vertex valences (number of incident edges)
-    - Vertex-face incidence lists
-    - Edge-to-face mappings
-    - Face-to-face adjacency
+    TODO: Handle normal orientation and faces' vertices order.
 """
 class MeshTopology:
     @staticmethod
@@ -30,9 +26,10 @@ class MeshTopology:
         return mesh
 
     def __init__(self, model):
-        self.vertex_connections = dict()
-        self.retriangulation_tags = dict()
-        self.state_flags = dict()
+        self.vertex_connections = dict() # Hash(Vertex) -> Set(Vertex)
+        self.face_orientations = dict() # Hash(Face|Vertex) -> Next Vertex in the face  
+        self.retriangulation_tags = dict() # Hash(Vertex) -> Retriangulation tag (+ or -)
+        self.state_flags = dict() # Hash(Face|Vertex) -> State flag (e.g., CONQUERED, TO_BE_CONQUERED, FREE)
         pass
 
 
@@ -56,6 +53,11 @@ class MeshTopology:
         
         for neighbor in self.vertex_connections[vertex]:
             self.vertex_connections[neighbor].remove(vertex)
+            for face in self.get_connected_faces((vertex, neighbor)):
+                del self.face_orientations[(face, vertex)]
+                del self.face_orientations[(face, neighbor)]
+                del self.face_orientations[(face, face.next_vertex((vertex, neighbor)))]
+
         del self.vertex_connections[vertex]
 
     def add_edge(self, fromV: Vertex, toV: Vertex):
@@ -64,6 +66,10 @@ class MeshTopology:
         
         self.vertex_connections[fromV].add(toV)
         self.vertex_connections[toV].add(fromV)
+
+        for face in self.get_connected_faces((fromV, toV)):
+            if (face, fromV) not in self.face_orientations:
+                self.set_face_orientation(face, (fromV, toV))
 
     def can_remove_edge(self, fromV: Vertex, toV: Vertex) -> bool:
         return (fromV in self.vertex_connections and
@@ -75,6 +81,11 @@ class MeshTopology:
         if self.can_remove_edge(fromV, toV) is False and not force:
             return
         
+        for face in self.get_connected_faces((fromV, toV)):
+            del self.face_orientations[(face, fromV)]
+            del self.face_orientations[(face, toV)]
+            del self.face_orientations[(face, face.next_vertex((fromV, toV)))]
+
         self.vertex_connections[fromV].remove(toV)
         self.vertex_connections[toV].remove(fromV)
 
@@ -93,6 +104,23 @@ class MeshTopology:
         if all(v in self.vertex_connections for v in face.vertices):
             self.state_flags[face] = flag
 
+    def set_face_orientation(self, face: Face, edge: Tuple[Vertex, Vertex]):
+        next_vertex = face.next_vertex(edge)
+        self.face_orientations[(face, edge[0])] = edge[1]
+        self.face_orientations[(face, edge[1])] = next_vertex
+        self.face_orientations[(face, next_vertex)] = edge[0]
+
+    def get_connected_vertices(self, vertex: Vertex) -> Set[Vertex]:
+        if vertex not in self.vertex_connections:
+            return []
+        return self.vertex_connections[vertex]
+
+    def get_shared_neighbours(self, v1: Vertex, v2: Vertex) -> List[Vertex]:
+        if v1[0] not in self.vertex_connections or v2[1] not in self.vertex_connections:
+            return []
+        
+        return self.vertex_connections[v1].intersection(self.vertex_connections[v2])
+
     def get_faces(self, vertex: Vertex) -> List[Face]:
         if vertex not in self.vertex_connections:
             return []
@@ -109,11 +137,12 @@ class MeshTopology:
                 faces.append(Face([vertex, a, b]))
         return faces
 
-    def get_faces(self, edge: Tuple[Vertex, Vertex]) -> List[Face]:
+    def get_connected_faces(self, edge: Tuple[Vertex, Vertex]) -> Tuple[Face, Face]:
         v1, v2 = edge
-        if v1 not in self.vertex_connections or v2 not in self.vertex_connections:
+        if v1 not in self.vertex_connections or v2 not in self.vertex_connections\
+            or v1 not in self.vertex_connections[v2] or v2 not in self.vertex_connections[v1]:
             return []
-        common_neighbors = self.vertex_connections[v1].intersection(self.vertex_connections[v2])
+        common_neighbors = self.get_shared_neighbours(v1, v2)
         return [Face([v1, v2, n]) for n in common_neighbors]
 
     def get_patch(self, vertex: Vertex) -> Patch:
@@ -124,10 +153,3 @@ class MeshTopology:
     
     def get_patch(self, gate: Gate) -> Patch:
         return self.get_patch(gate.front_vertex)
-    
-    def get_shared_neighbours(self, edge: Tuple[Vertex, Vertex]) -> List[Vertex]:
-        if edge[0] not in self.vertex_connections or edge[1] not in self.vertex_connections:
-            return []
-        
-        v_left, v_right = edge
-        return self.vertex_connections[v_left].intersection(self.vertex_connections[v_right])
