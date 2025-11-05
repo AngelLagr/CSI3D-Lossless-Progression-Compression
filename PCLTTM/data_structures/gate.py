@@ -1,3 +1,4 @@
+from PCLTTM.data_structures.face import Face
 from vertex import Vertex
 from patch import Patch
 from typing import Tuple
@@ -11,6 +12,8 @@ class Gate:
     
     # Gate related functions
     # Should we include a function that generates the frenet coordinates towards the front vertex?
+    def to_face(self) -> Face:
+        return Face([self.edge[0], self.edge[1], self.front_vertex], self.mesh)
 
     # Mesh related functions
     def generate_patch(self) -> Patch:

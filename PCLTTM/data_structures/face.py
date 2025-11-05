@@ -1,3 +1,4 @@
+from PCLTTM.data_structures.gate import Gate
 from data_structures.vertex import Vertex
 from constants import StateFlag
 from typing import Tuple
@@ -22,6 +23,20 @@ class Face:
         
         return next(v for v in self.vertices if v != edge[0] and v != edge[1])
     
+    def to_gate(self, direction_vertex: Vertex) -> Gate:
+        if direction_vertex not in self.vertices:
+            return None  # Invalid direction vertex for this face
+        
+        v1, v2, v3 = self.vertices
+        if direction_vertex == v1:
+            edge = (v2, v3)
+        elif direction_vertex == v2:
+            edge = (v3, v1)
+        else:
+            edge = (v1, v2)
+        
+        return Gate(edge, direction_vertex, self.mesh)
+
     # Mesh related functions
     def state_flag(self) -> StateFlag:
         return self.mesh.get_face_state(self) if self.mesh else StateFlag.Free
