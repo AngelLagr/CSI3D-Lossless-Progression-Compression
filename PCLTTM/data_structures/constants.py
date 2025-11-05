@@ -10,8 +10,7 @@ class StateFlag(IntEnum):
     Conquered = 1   # Processed (part of coarse mesh)
     ToRemove = 2   # Will be removed (part of a patch)
 
-
-class VertexTag(IntEnum):
+class RetriangulationTag(IntEnum):
     """Tags for boundary vertices to enable deterministic retriangulation."""
     Default = 0
     Plus = 1   # '+' tag

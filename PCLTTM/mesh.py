@@ -27,14 +27,14 @@ class MeshTopology:
 
     def __init__(self, model):
         self.vertex_connections = dict() # Hash(Vertex) -> Set(Vertex)
-        self.face_orientations = dict() # Hash(Face|Vertex) -> Next Vertex in the face  
+        self.face_orientations = dict() # Hash(Face, Vertex) -> Next Vertex in the face  
         self.retriangulation_tags = dict() # Hash(Vertex) -> Retriangulation tag (+ or -)
         self.state_flags = dict() # Hash(Face|Vertex) -> State flag (e.g., CONQUERED, TO_BE_CONQUERED, FREE)
         pass
 
 
     def add_vertex(self, x, y, z, connected_to: List[Vertex]):
-        self.add_vertex(Vertex((x, y, z)), connected_to)
+        self.add_vertex(Vertex((x, y, z), self), connected_to)
 
     def add_vertex(self, vertex: Vertex, connected_to: List[Vertex]):
         if vertex not in self.vertex_connections:
@@ -145,6 +145,7 @@ class MeshTopology:
         common_neighbors = self.get_shared_neighbours(v1, v2)
         return [Face([v1, v2, n]) for n in common_neighbors]
 
+    # Warning: Return the faces in a random order for the moment
     def get_patch(self, vertex: Vertex) -> Patch:
         if vertex not in self.vertex_connections:
             return None
