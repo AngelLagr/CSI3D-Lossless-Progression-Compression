@@ -26,7 +26,7 @@ class Vertex():
         return self.mesh.get_vertex_state(self) if self.mesh else StateFlag.Free
     
     def retriangulation_tag(self) -> RetriangulationTag:
-        return self.mesh.get_vertex_tag(self) if self.mesh else VertexTag.Default
+        return self.mesh.get_vertex_tag(self) if self.mesh else RetriangulationTag.Default
 
     # Internal functions
     def __hash__(self):

@@ -3,7 +3,7 @@
 # DATA STRUCTURES
 # ============================================================================
 
-from constants import StateFlag, VertexTag
+from constants import StateFlag, RetriangulationTag
 from vertex import Vertex
 from face import Face
 from gate import Gate

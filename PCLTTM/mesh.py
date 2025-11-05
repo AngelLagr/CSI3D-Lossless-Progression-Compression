@@ -1,6 +1,6 @@
 from typing import List, Set, Tuple
 from data_structures import Vertex, Face, Gate, Patch
-
+import data_structures.constants as constants
 from obja_parser import ObjaReader, ObjaWriter
 
 # ============================================================================
@@ -154,3 +154,19 @@ class MeshTopology:
     
     def get_patch(self, gate: Gate) -> Patch:
         return self.get_patch(gate.front_vertex)
+    
+    # Get the first available gate in the mesh
+    def get_initial_gate(self) -> Gate:
+        for v in self.vertex_connections:
+            neighbors = list(self.vertex_connections[v])
+            if len(neighbors) < 2:
+                continue
+            for i in range(len(neighbors)):
+                v1 = neighbors[i]
+                v2 = neighbors[(i + 1) % len(neighbors)]
+                if v1 in self.vertex_connections and v2 in self.vertex_connections[v1]:
+                    self.set_retriangulation_tag(v1, constants.RetriangulationTag.Plus)
+                    self.set_retriangulation_tag(v2, constants.RetriangulationTag.Minus)
+                    return Gate((v1, v2), v)
+        return None
+        
