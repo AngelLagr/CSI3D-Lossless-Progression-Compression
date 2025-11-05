@@ -23,13 +23,16 @@ class Patch:
     def local_coordinate_system(self):
         pass
 
-    def iterate_from(self, fromV: Vertex) -> List[Tuple[Vertex, Vertex]]:
+    def oriented_vertices(self) -> List[Vertex]:
+        return self.oriented_(self.gate.edge[0])
+
+    def oriented_vertices(self, fromV: Vertex) -> List[Vertex]:
         if self.gate.edge[0] != fromV and self.gate.edge[1] != fromV:
             return []
         
         remaining_faces = set(self.faces)
         remaining_faces.remove(self.gate.to_face())
-        edge_sequence = []
+        sequence = []
         current_vertex = fromV
         while len(remaining_faces) > 0:
             face = next((f for f in remaining_faces if current_vertex in f.vertices and self.center_vertex in f.vertices), None)
@@ -37,9 +40,21 @@ class Patch:
                 break # Error: still some faces left, but no more connected faces
             
             next_vertex = face.next_vertex((current_vertex, self.center_vertex))
-            edge_sequence.append((current_vertex, next_vertex))
+            sequence.append(next_vertex)
             current_vertex = next_vertex
             remaining_faces.remove(face)
+        
+        return sequence
+
+    def oriented_edges(self, fromV: Vertex) -> List[Tuple[Vertex, Vertex]]:
+        if self.gate.edge[0] != fromV and self.gate.edge[1] != fromV:
+            return []
+        
+        edge_sequence = []
+        current_vertex = fromV
+        for next_vertex in self.oriented_vertices(fromV):
+            edge_sequence.append((current_vertex, next_vertex))
+            current_vertex = next_vertex
         
         return edge_sequence
 
