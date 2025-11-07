@@ -2,6 +2,7 @@ from typing import List, Tuple, Dict
 from data_structures.face import Face
 from data_structures.vertex import Vertex
 from data_structures.gate import Gate
+from data_structures.constants import RetriangulationTag
 class Retriangulator:
     """
     Retriangulation 'table' (figure 9) d'un patch polygonal (valence 3..6)
@@ -33,7 +34,8 @@ class Retriangulator:
             "valence et taille de patch_oriented_vertex incompatibles"
         
         left_vertex, right_vertex = current_gate.edge
-        left_tag, right_tag = left_vertex.retriangulation_tag(), right_vertex.retriangulation_tag()
+        left_tag = self.tag_to_symbol(left_vertex.retriangulation_tag())
+        right_tag = self.tag_to_symbol(right_vertex.retriangulation_tag())
 
         front_vertex = current_gate.front_vertex
         
@@ -41,6 +43,25 @@ class Retriangulator:
 
         self.triangulate_table(mesh, front_vertex, patch_oriented_vertex, left_tag, right_tag,  valence)
 
+    @staticmethod
+    def tag_to_symbol(tag: RetriangulationTag) -> str:
+        """Convertit un tag enum en symbole '+' ou '-'"""
+        if tag == RetriangulationTag.Plus:
+            return '+'
+        elif tag == RetriangulationTag.Minus:
+            return '-'
+        else:
+            return '0'  # ou ' ' si tu veux un neutre visuel
+
+    @staticmethod
+    def symbol_to_tag(symbol: str) -> RetriangulationTag:
+        """Convertit un symbole '+' ou '-' en enum RetriangulationTag"""
+        if symbol == '+':
+            return RetriangulationTag.Plus
+        elif symbol == '-':
+            return RetriangulationTag.Minus
+        else:
+            return RetriangulationTag.Default
 
 
   
@@ -70,13 +91,13 @@ class Retriangulator:
             tag = start_tag
             for i in patch_oriented_vertex[1:-1]:
                 tag = alternance[tag]
-                mesh.set_retriangulation_tag(patch_oriented_vertex[i], tag)
+                mesh.set_retriangulation_tag(patch_oriented_vertex[i], self.symbol_to_tag(tag))
              
         else:
             tag = start_tag
             for i in reversed(patch_oriented_vertex[1:-1]):
                 tag = alternance[tag]
-                mesh.set_retriangulation_tag(patch_oriented_vertex[i], tag)
+                mesh.set_retriangulation_tag(patch_oriented_vertex[i], self.symbol_to_tag(tag))
             
 
 
@@ -128,7 +149,6 @@ class Retriangulator:
                 mesh.add_edge(pov[0], pov[2])
                 mesh.add_edge(pov[4], pov[2])
             else:
-
                 mesh.add_edge(mesh, pov[1], pov[4])
                 mesh.add_edge(mesh, pov[1], pov[3])
 
