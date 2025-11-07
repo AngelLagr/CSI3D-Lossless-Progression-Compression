@@ -12,7 +12,7 @@ class DecimationCode:
         else:
             self.valence_code = 3
 
-    def _target(self) -> Face|Vertex:
+    def _target(self) -> "Face|Vertex":
         if self.target_vertex != -1:
             return self.target_vertex
         elif self.target_face != -1:

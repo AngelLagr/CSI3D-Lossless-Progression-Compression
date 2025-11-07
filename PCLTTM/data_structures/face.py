@@ -1,6 +1,6 @@
-from PCLTTM.data_structures.gate import Gate
-from data_structures.vertex import Vertex
-from constants import StateFlag
+from .gate import Gate
+from .vertex import Vertex
+from .constants import StateFlag
 from typing import Tuple
 
 
