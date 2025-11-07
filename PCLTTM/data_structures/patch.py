@@ -1,6 +1,6 @@
-from PCLTTM.data_structures.gate import Gate
-from vertex import Vertex
-from face import Face
+from .gate import Gate
+from .vertex import Vertex
+from .face import Face
 from typing import List, Tuple
 
 
@@ -24,7 +24,7 @@ class Patch:
         pass
 
     def oriented_vertices(self) -> List[Vertex]:
-        return self.oriented_(self.gate.edge[0])
+        return self.oriented_vertices(self.gate.edge[0])
 
     def oriented_vertices(self, fromV: Vertex) -> List[Vertex]:
         if self.gate.edge[0] != fromV and self.gate.edge[1] != fromV:

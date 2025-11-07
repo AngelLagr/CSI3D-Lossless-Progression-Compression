@@ -1,6 +1,6 @@
-from PCLTTM.data_structures.gate import Gate
-from data_structures.vertex import Vertex
-from constants import StateFlag
+from .gate import Gate
+from .vertex import Vertex
+from .constants import StateFlag
 from typing import Tuple
 
 
@@ -44,4 +44,6 @@ class Face:
 
     # Internal functions
     def __hash__(self):
-        return hash(self.vertices)
+        # vertices may be a list (unhashable). Use a frozenset so the face
+        # hash is independent of vertex ordering and accepts lists.
+        return hash(frozenset(self.vertices))

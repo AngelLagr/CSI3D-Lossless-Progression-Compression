@@ -1,7 +1,7 @@
 from typing import List, Set, Tuple
-from data_structures import Vertex, Face, Gate, Patch
-import data_structures.constants as constants
-from obja_parser import ObjaReader, ObjaWriter
+from .data_structures import Vertex, Face, Gate, Patch
+from . import constants
+from .obja_parser import ObjaReader, ObjaWriter
 
 # ============================================================================
 # MESH TOPOLOGY HELPERS
@@ -19,13 +19,13 @@ class MeshTopology:
         mesh = MeshTopology()
         for elem in reader.parse_file(file_path):
             if isinstance(elem, Vertex):
-                mesh.add_vertex(elem)
+                mesh.add_vertex(elem, [])
             elif isinstance(elem, Face):
                 for edge in elem.edges():
                     mesh.add_edge(*edge)
         return mesh
 
-    def __init__(self, model):
+    def __init__(self):
         self.vertex_connections = dict() # Hash(Vertex) -> Set(Vertex)
         self.face_orientations = dict() # Hash(Face, Vertex) -> Next Vertex in the face  
         self.retriangulation_tags = dict() # Hash(Vertex) -> Retriangulation tag (+ or -)
@@ -116,9 +116,13 @@ class MeshTopology:
         return self.vertex_connections[vertex]
 
     def get_shared_neighbours(self, v1: Vertex, v2: Vertex) -> List[Vertex]:
-        if v1[0] not in self.vertex_connections or v2[1] not in self.vertex_connections:
-            return []
-        
+        # v1 and v2 are Vertex objects; do not subscript them. Check membership
+        # directly in the vertex_connections dict and return the intersection
+        # of their neighbor sets (possibly empty).
+        #if v1[0] not in self.vertex_connections or v2[1] not in self.vertex_connections:
+        #    return []
+        if v1 not in self.vertex_connections or v2 not in self.vertex_connections:
+            return set()
         return self.vertex_connections[v1].intersection(self.vertex_connections[v2])
 
     def get_faces(self, vertex: Vertex) -> List[Face]:
@@ -161,6 +165,7 @@ class MeshTopology:
             neighbors = list(self.vertex_connections[v])
             if len(neighbors) < 2:
                 continue
+            
             for i in range(len(neighbors)):
                 v1 = neighbors[i]
                 v2 = neighbors[(i + 1) % len(neighbors)]
@@ -170,3 +175,26 @@ class MeshTopology:
                     return Gate((v1, v2), v)
         return None
         
+    # todelete : for debug purpose
+    def export_to_obj(self, file_path: str):
+        # Simple OBJ exporter (debug): write vertices and faces to an OBJ file.
+        vertices = list(self.vertex_connections.keys())
+        vertex_indices = {v: i + 1 for i, v in enumerate(vertices)}  # OBJ indices start at 1
+
+        with open(file_path, 'w') as out:
+            # write vertices
+            for v in vertices:
+                x, y, z = v.position
+                out.write(f"v {x} {y} {z}\n")
+
+            # write faces (avoid duplicates)
+            seen_faces = set()
+            for v in vertices:
+                faces = self.get_faces(v)
+                for f in faces:
+                    key = frozenset(f.vertices)
+                    if key in seen_faces:
+                        continue
+                    seen_faces.add(key)
+                    indices = [vertex_indices[vert] for vert in f.vertices]
+                    out.write(f"f {indices[0]} {indices[1]} {indices[2]}\n")

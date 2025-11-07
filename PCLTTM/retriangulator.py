@@ -1,8 +1,8 @@
 from typing import List, Tuple, Dict
-from data_structures.face import Face
-from data_structures.vertex import Vertex
-from data_structures.gate import Gate
-from data_structures.constants import RetriangulationTag
+from .data_structures.face import Face
+from .data_structures.vertex import Vertex
+from .data_structures.gate import Gate
+from .data_structures.constants import RetriangulationTag
 class Retriangulator:
     """
     Retriangulation 'table' (figure 9) d'un patch polygonal (valence 3..6)

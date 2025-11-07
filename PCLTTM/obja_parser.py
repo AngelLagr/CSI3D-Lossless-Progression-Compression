@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from data_structures import Face, Vertex
+from .data_structures import Face, Vertex
 
 
 """
@@ -13,6 +13,9 @@ class ObjaReader:
     def __init__(self):
         self.commands = dict()
         self._define_commands()
+        self.line = 0
+        # keep a list of parsed vertices so face indices can reference them
+        self.vertices = []
 
     def _define_commands(self):
         self.commands["v"] = self._parse_vertex
@@ -28,12 +31,40 @@ class ObjaReader:
     def _parse_vertex(self, *args):
         if len(args) != 3:
             raise ValueError("Vertex command requires 3 arguments")
-        return Vertex(args)
+
+        # Convert coordinate tokens to floats and create a Vertex instance
+        try:
+            x = float(args[0])
+            y = float(args[1])
+            z = float(args[2])
+        except Exception as e:
+            raise ValueError(f"Invalid vertex coordinates on line {self.line}: {args}") from e
+
+        v = Vertex((x, y, z))
+        # store vertex so faces can reference it by index
+        self.vertices.append(v)
+        return v
 
     def _parse_face(self, *args):
         if len(args) != 3:
             raise ValueError("Face command requires 3 arguments")
-        return Face(args)
+
+        # OBJ face tokens are indices (possibly with texture/normal like '3/1/1').
+        # We extract the vertex index before the first '/'. Indices in OBJ are 1-based.
+        verts = []
+        for tok in args:
+            idx_str = tok.split('/')[0]
+            try:
+                idx = int(idx_str)
+            except Exception as e:
+                raise ValueError(f"Invalid face index on line {self.line}: {tok}") from e
+
+            if idx == 0 or idx > len(self.vertices):
+                raise IndexError(f"Face index out of range on line {self.line}: {idx}")
+
+            verts.append(self.vertices[idx - 1])
+
+        return Face(tuple(verts))
 
     def __parse_line(self, line):
         """
@@ -49,7 +80,9 @@ class ObjaReader:
         command = split[0]
         if command in self.commands:
             if len(split) > 1:
-                return self.commands[command](split[1:])
+                # Unpack the arguments so handlers declared as def handler(self, *args)
+                # receive each token as a separate positional argument.
+                return self.commands[command](*split[1:])
             else:
                 return self.commands[command]()
 
