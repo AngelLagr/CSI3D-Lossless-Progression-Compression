@@ -44,4 +44,4 @@ class Face:
 
     # Internal functions
     def __hash__(self):
-        return hash(self.vertices)
+        return hash(frozenset(self.vertices))

@@ -1,4 +1,5 @@
 from typing import List, Set, Tuple
+from mesh_snapshot import MeshSnapshot
 from data_structures import Vertex, Face, Gate, Patch
 import data_structures.constants as constants
 from obja_parser import ObjaReader, ObjaWriter
@@ -26,11 +27,37 @@ class MeshTopology:
         return mesh
 
     def __init__(self, model):
-        self.vertex_connections = dict() # Hash(Vertex) -> Set(Vertex)
-        self.face_orientations = dict() # Hash(Face, Vertex) -> Next Vertex in the face  
+        self.state = MeshSnapshot()
         self.retriangulation_tags = dict() # Hash(Vertex) -> Retriangulation tag (+ or -)
         self.state_flags = dict() # Hash(Face|Vertex) -> State flag (e.g., CONQUERED, TO_BE_CONQUERED, FREE)
+        self.current_transaction = None
         pass
+
+    def transaction(self):
+        if self.current_transaction is not None:
+            self.current_transaction = MeshSnapshot()
+        return self.current_transaction
+
+    def commit(self):
+        if self.current_transaction is not None:
+            self.state.apply(self.current_transaction)
+            self.current_transaction = None
+
+    def rollback(self):
+        if self.current_transaction is None:
+            self.current_transaction = None
+
+    def set_retriangulation_tag(self, vertex: Vertex, tag):
+        if vertex in self.vertex_connections:
+            self.retriangulation_tags[vertex] = tag
+
+    def set_vertex_state(self, vertex: Vertex, flag):
+        if vertex in self.vertex_connections:
+            self.state_flags[vertex] = flag
+
+    def set_face_state(self, face: Face, flag):
+        if all(v in self.vertex_connections for v in face.vertices):
+            self.state_flags[face] = flag
 
 
     def add_vertex(self, x, y, z, connected_to: List[Vertex]):
@@ -91,18 +118,6 @@ class MeshTopology:
 
     def remove_edge(self, gate: Gate):
         self.remove_edge(gate.edge[0], gate.edge[1])
-
-    def set_retriangulation_tag(self, vertex: Vertex, tag):
-        if vertex in self.vertex_connections:
-            self.retriangulation_tags[vertex] = tag
-
-    def set_vertex_state(self, vertex: Vertex, flag):
-        if vertex in self.vertex_connections:
-            self.state_flags[vertex] = flag
-
-    def set_face_state(self, face: Face, flag):
-        if all(v in self.vertex_connections for v in face.vertices):
-            self.state_flags[face] = flag
 
     def set_face_orientation(self, face: Face, edge: Tuple[Vertex, Vertex]):
         next_vertex = face.next_vertex(edge)
