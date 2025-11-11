@@ -10,7 +10,7 @@ class Vertex():
 
     # Mesh related functions
     def valence(self) -> int:
-        return self.mesh.get_vertex_valence(self) if self.mesh else 0
+        return self.mesh.get_valence(self) if self.mesh else 0
     
     def generate_patch(self) -> "Patch":
         return self.mesh.get_patch(self) if self.mesh else []
@@ -21,12 +21,15 @@ class Vertex():
     def connected_faces(self) -> List["Face"]:
         return self.mesh.get_faces(self) if self.mesh else []
     
-    def state_flag(self) -> StateFlag:
-        return self.mesh.get_vertex_state(self) if self.mesh else StateFlag.Free
-    
-    def retriangulation_tag(self) -> RetriangulationTag:
-        return self.mesh.get_vertex_tag(self) if self.mesh else RetriangulationTag.Default
-
     # Internal functions
+    def __lt__(self, other):
+        return self.position < other.position
+
     def __hash__(self):
         return hash(self.position)
+    
+    def __eq__(self, other):
+        return isinstance(other, Vertex) and  self.position == other.position
+    
+    def __repr__(self):
+        return "(" + ", ".join([str(pos) for pos in self.position]) + ")"

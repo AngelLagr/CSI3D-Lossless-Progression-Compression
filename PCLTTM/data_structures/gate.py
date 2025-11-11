@@ -13,7 +13,7 @@ class Gate:
     def to_face(self) -> "Face":
         # local import to avoid circular import issues at module import time
         from .face import Face
-        return Face([self.edge[0], self.edge[1], self.front_vertex], self.mesh)
+        return Face((self.edge[0], self.edge[1], self.front_vertex), self.mesh)
 
     # Mesh related functions
     def generate_patch(self) -> "Patch":

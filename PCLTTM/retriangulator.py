@@ -11,12 +11,14 @@ class Retriangulator:
     - Propagation des tags par alternance, priorité au côté droit en cas d'égalité.
     - Triangulation par ear-clipping : priorité aux sommets tagués '-'.
     """
+    def __init__(self):
+        self.retriangulation_tags = dict() # Hash(Vertex) -> Retriangulation tag (+ or -)
 
     def retriangulate(
         self,
         mesh,
         valence: int, current_gate: Gate,
-        patch_oriented_vertex: List[int],
+        patch_oriented_vertex: List[Vertex],
     ) -> Tuple[List[Face], Dict[int, str]]:
         """
         Args:
@@ -34,8 +36,8 @@ class Retriangulator:
             "valence et taille de patch_oriented_vertex incompatibles"
         
         left_vertex, right_vertex = current_gate.edge
-        left_tag = self.tag_to_symbol(left_vertex.retriangulation_tag())
-        right_tag = self.tag_to_symbol(right_vertex.retriangulation_tag())
+        left_tag = self.retriangulation_tags.get(left_vertex, RetriangulationTag.Default)
+        right_tag = self.retriangulation_tags.get(right_vertex, RetriangulationTag.Default)
 
         front_vertex = current_gate.front_vertex
         
@@ -43,30 +45,9 @@ class Retriangulator:
 
         self.triangulate_table(mesh, front_vertex, patch_oriented_vertex, left_tag, right_tag,  valence)
 
-    @staticmethod
-    def tag_to_symbol(tag: RetriangulationTag) -> str:
-        """Convertit un tag enum en symbole '+' ou '-'"""
-        if tag == RetriangulationTag.Plus:
-            return '+'
-        elif tag == RetriangulationTag.Minus:
-            return '-'
-        else:
-            return '0'  # ou ' ' si tu veux un neutre visuel
-
-    @staticmethod
-    def symbol_to_tag(symbol: str) -> RetriangulationTag:
-        """Convertit un symbole '+' ou '-' en enum RetriangulationTag"""
-        if symbol == '+':
-            return RetriangulationTag.Plus
-        elif symbol == '-':
-            return RetriangulationTag.Minus
-        else:
-            return RetriangulationTag.Default
-
-
   
-    def tag_propagation(mesh,
-        patch_oriented_vertex: List[int],
+    def tag_propagation(self, mesh,
+        patch_oriented_vertex: List[Vertex],
         left_tag: str,
         right_tag: str,
     ) -> Dict[int, str]:
@@ -75,9 +56,9 @@ class Retriangulator:
 
         # Pour chchoisir le coté prioritaire on regarde si le coté droit est différent du coté gauche
         # sinon on commence du coté droit
-        alternance = {'-':'+', '+':'-'}
+        alternance = {RetriangulationTag.Minus: RetriangulationTag.Plus, RetriangulationTag.Plus: RetriangulationTag.Minus}
         if left_tag != right_tag:
-            if left_tag == '-':
+            if left_tag == RetriangulationTag.Minus:
                 start_tag = left_tag
                 start_side = 'left'
             else:
@@ -89,15 +70,15 @@ class Retriangulator:
 
         if start_side == 'right':
             tag = start_tag
-            for i in patch_oriented_vertex[1:-1]:
+            for vertex in patch_oriented_vertex[1:-1]:
                 tag = alternance[tag]
-                mesh.set_retriangulation_tag(patch_oriented_vertex[i], self.symbol_to_tag(tag))
+                self.retriangulation_tags[vertex] = tag
              
         else:
             tag = start_tag
-            for i in reversed(patch_oriented_vertex[1:-1]):
+            for vertex in reversed(patch_oriented_vertex[1:-1]):
                 tag = alternance[tag]
-                mesh.set_retriangulation_tag(patch_oriented_vertex[i], self.symbol_to_tag(tag))
+                self.retriangulation_tags[vertex] = tag
             
 
 
@@ -115,63 +96,74 @@ class Retriangulator:
     # Sinon on relie le premier sommet avec le troisieme sommet du polygone
 
         mesh.remove_vertex(front_vertex)
-
+        if valence < 3 or valence > 6:
+            return []
+        
         pov = patch_oriented_vertex  # alias court
 
-        if valence == 3:
-            # rien à ajouter
-            pass
-
-        elif valence == 4:
-            if left_tag == '+' and right_tag == '-':
-                # priorité au '-' de droite → diagonale (1,3)
-                mesh.add_edge(pov[1], pov[3])
-            elif left_tag == '-' and right_tag == '+':
-                # priorité au '-' de gauche → diagonale (0,2)
-                mesh.add_edge(pov[0], pov[2])
-            elif left_tag == '+' and right_tag == '+':
-                # gate ++ OU gate -- : priorité côté droit → diagonale (1,3)
-                mesh.add_edge(pov[0], pov[2])
-            else :
-                mesh.add_edge(pov[1], pov[3])
-
-        elif valence == 5:
-            if left_tag == '-' and right_tag == '+':
-                # priorité au '-' de gauche → éventail depuis 0
-                mesh.add_edge(pov[1], pov[3])
-                mesh.add_edge(pov[0], pov[3])
-            elif left_tag == '+' and right_tag == '-':
-                # priorité au '-' de droite → éventail depuis 4
-                mesh.add_edge(pov[4], pov[1])
-                mesh.add_edge(pov[1], pov[3])
-            elif left_tag == '+' and right_tag == '+':
-                # ++ ou -- : priorité côté droit → éventail depuis 4
-                mesh.add_edge(pov[0], pov[2])
-                mesh.add_edge(pov[4], pov[2])
-            else:
-                mesh.add_edge(mesh, pov[1], pov[4])
-                mesh.add_edge(mesh, pov[1], pov[3])
-
-        elif valence == 6:
-            if left_tag == '-' and right_tag == '+':
-                # priorité au '-' de gauche → éventail depuis 0
-                mesh.add_edge(mesh, pov[0], pov[2])
-                mesh.add_edge(mesh, pov[2], pov[4])
-                mesh.add_edge(mesh, pov[0], pov[4])
-            elif left_tag == '+' and right_tag == '-':
-                # priorité au '-' de droite → éventail depuis 5
-                mesh.add_edge(mesh, pov[5], pov[1])
-                mesh.add_edge(mesh, pov[3], pov[1])
-                mesh.add_edge(mesh, pov[5], pov[3])
-            elif left_tag == '+' and right_tag == '+':
-                # ++ ou -- : priorité côté droit → éventail depuis 5
-                mesh.add_edge(mesh, pov[0], pov[2])
-                mesh.add_edge(mesh, pov[2], pov[4])
-                mesh.add_edge(mesh, pov[0], pov[4])
-            else :
-                mesh.add_edge(mesh, pov[5], pov[1])
-                mesh.add_edge(mesh, pov[3], pov[1])
-                mesh.add_edge(mesh, pov[5], pov[3])
+        # python 3.10+ pattern matching
+        match (left_tag, right_tag):
+            case (RetriangulationTag.Plus, RetriangulationTag.Minus):
+                match valence:
+                    case 4:
+                        # priorité au '-' de droite → diagonale (1,3)
+                        mesh.add_edge(pov[1], pov[3])
+                    case 5:
+                        # priorité au '-' de droite → éventail depuis 4
+                        mesh.add_edge(pov[4], pov[1])
+                        mesh.add_edge(pov[1], pov[3])
+                    case 6:
+                        # priorité au '-' de droite → éventail depuis 5
+                        mesh.add_edge(pov[5], pov[1])
+                        mesh.add_edge(pov[3], pov[1])
+                        mesh.add_edge(pov[5], pov[3])
+                    case _:
+                        pass
+            case (RetriangulationTag.Minus, RetriangulationTag.Plus):
+                match valence:
+                    case 4:
+                        # priorité au '-' de gauche → diagonale (0,2)
+                        mesh.add_edge(pov[0], pov[2])
+                    case 5:
+                        # priorité au '-' de gauche → éventail depuis 0
+                        mesh.add_edge(pov[1], pov[3])
+                        mesh.add_edge(pov[0], pov[3])
+                    case 6:
+                        # priorité au '-' de gauche → éventail depuis 0
+                        mesh.add_edge(pov[0], pov[2])
+                        mesh.add_edge(pov[2], pov[4])
+                        mesh.add_edge(pov[0], pov[4])
+                    case _:
+                        pass
+            case (RetriangulationTag.Plus, RetriangulationTag.Plus):
+                match valence:
+                    case 4:
+                        # gate ++ OU gate -- : priorité côté droit → diagonale (1,3)
+                        mesh.add_edge(pov[0], pov[2])
+                    case 5:
+                        # ++ ou -- : priorité côté droit → éventail depuis 4
+                        mesh.add_edge(pov[0], pov[2])
+                        mesh.add_edge(pov[4], pov[2])
+                    case 6:
+                        # ++ ou -- : priorité côté droit → éventail depuis 5
+                        mesh.add_edge(pov[0], pov[2])
+                        mesh.add_edge(pov[2], pov[4])
+                        mesh.add_edge(pov[0], pov[4])
+                    case _:
+                        pass
+            case _: # (RetriangulationTag.Minus, RetriangulationTag.Minus)
+                match valence:
+                    case 4:
+                        mesh.add_edge(pov[1], pov[3])
+                    case 5:
+                        mesh.add_edge(pov[1], pov[4])
+                        mesh.add_edge(pov[1], pov[3])
+                    case 6:
+                        mesh.add_edge(pov[5], pov[1])
+                        mesh.add_edge(pov[3], pov[1])
+                        mesh.add_edge(pov[5], pov[3])
+                    case _:
+                        pass
 
 
     

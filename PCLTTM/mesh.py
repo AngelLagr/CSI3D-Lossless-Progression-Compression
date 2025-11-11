@@ -1,4 +1,7 @@
-from typing import List, Set, Tuple
+from collections import deque
+from copy import deepcopy
+import random
+from typing import List, Optional, Set, Tuple
 from .data_structures import Vertex, Face, Gate, Patch
 from . import constants
 from .obja_parser import ObjaReader, ObjaWriter
@@ -13,6 +16,41 @@ from .obja_parser import ObjaReader, ObjaWriter
     TODO: Handle normal orientation and faces' vertices order.
 """
 class MeshTopology:
+    class State:
+        def __init__(self):
+            self.vertex_connections = dict() # Hash(Vertex) -> Set(Vertex)
+            self.orientations = dict() # Hash(Edge: [Vertex_from, Vertex_to]) -> (3e Vertex de la face de gauche [from->to], 3e Vertex de la face de droite [to->from]) 
+        
+        # self has priority over other on orientations conflict
+        def difference(self, other):
+            diff = MeshTopology.State()
+            different_vertex = set(self.vertex_connections.keys()).difference(set(other.vertex_connections.keys()))
+            for fromV in different_vertex:
+                diff.vertex_connections[fromV] = deepcopy(self.vertex_connections[fromV])
+                for toV in self.vertex_connections[fromV]:
+                    if toV not in diff.vertex_connections:
+                        diff.vertex_connections[toV] = set()
+
+                    diff.vertex_connections[toV].add(fromV)
+                    diff.orientations[(fromV, toV)] = self.orientations[(fromV, toV)]
+                    diff.orientations[(toV, fromV)] = self.orientations[(toV, fromV)]
+
+            # repeat on the other side
+            different_vertex = set(other.vertex_connections.keys()).difference(set(self.vertex_connections.keys()))
+            for fromV in different_vertex:
+                diff.vertex_connections[fromV] = other.vertex_connections[fromV]
+                for toV in other.vertex_connections[fromV]:
+                    if toV not in diff.vertex_connections:
+                        diff.vertex_connections[toV] = set()
+                    
+                    diff.vertex_connections[toV].add(fromV)
+                    if (fromV, toV) not in diff.orientations:
+                        diff.orientations[(fromV, toV)] = other.orientations[(fromV, toV)]
+                    if (toV, fromV) not in diff.orientations:
+                        diff.orientations[(toV, fromV)] = other.orientations[(toV, fromV)]
+            return diff
+
+
     @staticmethod
     def from_obj_file(file_path: str):
         reader = ObjaReader()
@@ -23,85 +61,63 @@ class MeshTopology:
             elif isinstance(elem, Face):
                 for edge in elem.edges():
                     mesh.add_edge(*edge)
+                    mesh.set_orientation(edge, elem.next_vertex(edge))
         return mesh
 
-    def __init__(self, model):
-        self.state = MeshSnapshot()
-        self.retriangulation_tags = dict() # Hash(Vertex) -> Retriangulation tag (+ or -)
-        self.state_flags = dict() # Hash(Face|Vertex) -> State flag (e.g., CONQUERED, TO_BE_CONQUERED, FREE)
-        self.current_transaction = None
-        pass
-
-    def transaction(self):
-        if self.current_transaction is not None:
-            self.current_transaction = MeshSnapshot()
-        return self.current_transaction
+    def __init__(self):
+        self.active_state = MeshTopology.State()
+        self.committed_states = deque()
 
     def commit(self):
-        if self.current_transaction is not None:
-            self.state.apply(self.current_transaction)
-            self.current_transaction = None
+        diff = self.active_state.difference(self.committed_states[-1])
+        self.committed_states.append(deepcopy(self.active_state))
+        return diff        
 
     def rollback(self):
-        if self.current_transaction is None:
-            self.current_transaction = None
-
-    def set_retriangulation_tag(self, vertex: Vertex, tag):
-        if vertex in self.vertex_connections:
-            self.retriangulation_tags[vertex] = tag
-
-    def set_vertex_state(self, vertex: Vertex, flag):
-        if vertex in self.vertex_connections:
-            self.state_flags[vertex] = flag
-
-    def set_face_state(self, face: Face, flag):
-        if all(v in self.vertex_connections for v in face.vertices):
-            self.state_flags[face] = flag
-
+        if len(self.committed_states) > 0:
+            self.active_state = self.committed_states.pop()
 
     def add_vertex(self, x, y, z, connected_to: List[Vertex]):
         self.add_vertex(Vertex((x, y, z), self), connected_to)
 
     def add_vertex(self, vertex: Vertex, connected_to: List[Vertex]):
-        if vertex not in self.vertex_connections:
-            self.vertex_connections[vertex] = set()
+        if vertex not in self.active_state.vertex_connections:
+            vertex.mesh = self
+            self.active_state.vertex_connections[vertex] = set()
             for conn in connected_to:
                 self.add_edge(vertex, conn)
 
     def can_remove_vertex(self, vertex: Vertex) -> bool:
-        if vertex not in self.vertex_connections:
+        if vertex not in self.active_state.vertex_connections:
             return False
-        return all(len(self.vertex_connections[neighbor]) > 3 for neighbor in self.vertex_connections[vertex])
+        return all(len(self.active_state.vertex_connections[neighbor]) > 3 for neighbor in self.active_state.vertex_connections[vertex])
     
     def remove_vertex(self, vertex: Vertex, force: bool = False):
         if self.can_remove_vertex(vertex) is False and not force:
             return
         
-        for neighbor in self.vertex_connections[vertex]:
-            self.vertex_connections[neighbor].remove(vertex)
-            for face in self.get_connected_faces((vertex, neighbor)):
-                del self.face_orientations[(face, vertex)]
-                del self.face_orientations[(face, neighbor)]
-                del self.face_orientations[(face, face.next_vertex((vertex, neighbor)))]
+        for neighbor in self.active_state.vertex_connections[vertex]:
+            self.active_state.vertex_connections[neighbor].remove(vertex)
+            
+            del self.active_state.orientations[(vertex, neighbor)]
+            del self.active_state.orientations[(neighbor, vertex)]
 
-        del self.vertex_connections[vertex]
+        del self.active_state.vertex_connections[vertex]
 
     def add_edge(self, fromV: Vertex, toV: Vertex):
-        if fromV not in self.vertex_connections or toV not in self.vertex_connections:
+        if fromV not in self.active_state.vertex_connections or toV not in self.active_state.vertex_connections:
             return
         
-        self.vertex_connections[fromV].add(toV)
-        self.vertex_connections[toV].add(fromV)
+        self.active_state.vertex_connections[fromV].add(toV)
+        self.active_state.vertex_connections[toV].add(fromV)
 
-        for face in self.get_connected_faces((fromV, toV)):
-            if (face, fromV) not in self.face_orientations:
-                self.set_face_orientation(face, (fromV, toV))
+        # Could add automatic detection of orientations, but a bit complex, just use set_orientations after
 
     def can_remove_edge(self, fromV: Vertex, toV: Vertex) -> bool:
-        return (fromV in self.vertex_connections and
-                toV in self.vertex_connections[fromV] and
-                len(self.vertex_connections[fromV]) > 3 and
-                len(self.vertex_connections[toV]) > 3)
+        return (fromV in self.active_state.vertex_connections and
+                toV in self.active_state.vertex_connections[fromV] and
+                len(self.active_state.vertex_connections[fromV]) > 3 and
+                len(self.active_state.vertex_connections[toV]) > 3)
     
     def remove_edge(self, fromV: Vertex, toV: Vertex, force: bool = False):
         if self.can_remove_edge(fromV, toV) is False and not force:
@@ -112,103 +128,117 @@ class MeshTopology:
             del self.face_orientations[(face, toV)]
             del self.face_orientations[(face, face.next_vertex((fromV, toV)))]
 
-        self.vertex_connections[fromV].remove(toV)
-        self.vertex_connections[toV].remove(fromV)
+        self.active_state.vertex_connections[fromV].remove(toV)
+        self.active_state.vertex_connections[toV].remove(fromV)
 
     def remove_edge(self, gate: Gate):
         self.remove_edge(gate.edge[0], gate.edge[1])
 
-    def set_face_orientation(self, face: Face, edge: Tuple[Vertex, Vertex]):
-        next_vertex = face.next_vertex(edge)
-        self.face_orientations[(face, edge[0])] = edge[1]
-        self.face_orientations[(face, edge[1])] = next_vertex
-        self.face_orientations[(face, next_vertex)] = edge[0]
+    def set_orientation(self, from_to: Tuple[Vertex, Vertex], third_vertex: Vertex) -> bool:
+        fromV, toV = from_to
+        common_neighbours = self.active_state.vertex_connections[fromV].intersection(self.active_state.vertex_connections[toV])
+        if len(common_neighbours) not in {1, 2}:
+            return False # Badly structured mesh, can't define the orientation
+        
+        other_vertex = next((v for v in common_neighbours if v != third_vertex), None)
+        self.active_state.orientations[from_to] = (third_vertex, other_vertex)
+        self.active_state.orientations[(toV, fromV)] = (other_vertex, third_vertex) 
+        return True
 
     def get_connected_vertices(self, vertex: Vertex) -> Set[Vertex]:
-        if vertex not in self.vertex_connections:
+        if vertex not in self.active_state.vertex_connections:
             return []
-        return self.vertex_connections[vertex]
+        
+        return self.active_state.vertex_connections[vertex]
 
-    def get_shared_neighbours(self, v1: Vertex, v2: Vertex) -> List[Vertex]:
-        # v1 and v2 are Vertex objects; do not subscript them. Check membership
-        # directly in the vertex_connections dict and return the intersection
-        # of their neighbor sets (possibly empty).
-        #if v1[0] not in self.vertex_connections or v2[1] not in self.vertex_connections:
-        #    return []
-        if v1 not in self.vertex_connections or v2 not in self.vertex_connections:
-            return set()
-        return self.vertex_connections[v1].intersection(self.vertex_connections[v2])
+    # Return (None, None) if the edge is not oriented
+    def get_oriented_vertices(self, oriented_edge: Tuple[Vertex, Vertex]) -> Tuple[Optional[Vertex], Optional[Vertex]]:
+        if oriented_edge not in self.active_state.orientations:
+            return (None, None)
+        
+        return self.active_state.orientations[oriented_edge]
 
-    def get_faces(self, vertex: Vertex) -> List[Face]:
-        if vertex not in self.vertex_connections:
+    # Left face is the one in the orientation of from -> to, right is to -> from
+    def get_oriented_faces(self, from_to: Tuple[Vertex, Vertex]) -> Tuple[Optional[Face], Optional[Face]]:
+        oriented_vertices = self.get_oriented_vertices(from_to)
+        left_vertex, right_vertex = oriented_vertices
+        v1, v2 = from_to
+        return (Face((v1, v2, left_vertex), self) if left_vertex is not None else None,\
+                Face((v2, v1, right_vertex), self) if right_vertex is not None else None)
+
+    def get_faces(self, fromV: Vertex) -> Set[Face]:
+        if fromV not in self.active_state.vertex_connections:
             return []
-        faces = []
-        seen = set()
-        neighbors = self.vertex_connections[vertex]
-        for a in neighbors:
-            common_neighbors = neighbors.intersection(self.vertex_connections.get(a, set()))
-            for b in common_neighbors:
-                key = frozenset((vertex, a, b))
-                if key in seen:
-                    continue
-                seen.add(key)
-                faces.append(Face([vertex, a, b]))
+        
+        faces = set()
+        valence = self.get_valence(fromV)
+        neighbors = self.active_state.vertex_connections[fromV]
+        for toV in neighbors:
+            if valence == len(faces):
+                break
+
+            connected_faces = self.get_oriented_faces((fromV, toV))
+            for face in connected_faces:
+                print(face, ":", hash(face))
+                faces.add(face)
+
         return faces
-
-    def get_connected_faces(self, edge: Tuple[Vertex, Vertex]) -> Tuple[Face, Face]:
-        v1, v2 = edge
-        if v1 not in self.vertex_connections or v2 not in self.vertex_connections\
-            or v1 not in self.vertex_connections[v2] or v2 not in self.vertex_connections[v1]:
-            return []
-        common_neighbors = self.get_shared_neighbours(v1, v2)
-        return [Face([v1, v2, n]) for n in common_neighbors]
 
     # Warning: Return the faces in a random order for the moment
     def get_patch(self, vertex: Vertex) -> Patch:
-        if vertex not in self.vertex_connections:
+        if vertex not in self.active_state.vertex_connections:
             return None
         faces = self.get_faces(vertex)
-        return Patch(vertex, faces)
+        return Patch(vertex, faces, self)
     
-    def get_patch(self, gate: Gate) -> Patch:
-        return self.get_patch(gate.front_vertex)
+    def get_valence(self, vertex: Vertex) -> int:
+        return len(self.active_state.vertex_connections.get(vertex, set()))
     
+    def get_vertices(self) -> Set[Vertex]:
+        return self.active_state.vertex_connections.keys()
+
     # Get the first available gate in the mesh
-    def get_initial_gate(self) -> Gate:
-        for v in self.vertex_connections:
-            neighbors = list(self.vertex_connections[v])
-            if len(neighbors) < 2:
+    def get_random_gate(self) -> Gate:
+        if len(self.active_state.vertex_connections) == 0:
+            return None
+        
+        MAX_TRIALS = len(self.active_state.vertex_connections) * 2 # Arbituary upper limit
+        for trial in range(MAX_TRIALS):
+            v1 = random.sample(list(self.active_state.vertex_connections.keys()), 1)[0]
+            if len(self.active_state.vertex_connections[v1]) == 0:
                 continue
-            
-            for i in range(len(neighbors)):
-                v1 = neighbors[i]
-                v2 = neighbors[(i + 1) % len(neighbors)]
-                if v1 in self.vertex_connections and v2 in self.vertex_connections[v1]:
-                    self.set_retriangulation_tag(v1, constants.RetriangulationTag.Plus)
-                    self.set_retriangulation_tag(v2, constants.RetriangulationTag.Minus)
-                    return Gate((v1, v2), v)
+
+            v2 = random.sample(list(self.active_state.vertex_connections[v1]), 1)[0]
+            adjacent_vertex = self.get_oriented_vertices((v1, v2))
+            if adjacent_vertex[0] is not None:
+                return Gate((v1, v2), adjacent_vertex[0], self)
+            elif adjacent_vertex[1] is not None:
+                return Gate((v2, v1), adjacent_vertex[1], self)
+
         return None
         
     # todelete : for debug purpose
     def export_to_obj(self, file_path: str):
         # Simple OBJ exporter (debug): write vertices and faces to an OBJ file.
-        vertices = list(self.vertex_connections.keys())
-        vertex_indices = {v: i + 1 for i, v in enumerate(vertices)}  # OBJ indices start at 1
-
+        vertices = self.active_state.vertex_connections.keys()
+        indices = dict()
         with open(file_path, 'w') as out:
             # write vertices
-            for v in vertices:
-                x, y, z = v.position
+            current_index = 1
+            for vertex in vertices:
+                x, y, z = vertex.position
                 out.write(f"v {x} {y} {z}\n")
+                indices[vertex] = current_index
+                current_index += 1
+
 
             # write faces (avoid duplicates)
             seen_faces = set()
-            for v in vertices:
-                faces = self.get_faces(v)
+            for vertex in vertices:
+                faces = self.get_faces(vertex)
                 for f in faces:
-                    key = frozenset(f.vertices)
-                    if key in seen_faces:
+                    if f in seen_faces:
                         continue
-                    seen_faces.add(key)
-                    indices = [vertex_indices[vert] for vert in f.vertices]
+                    seen_faces.add(f)
+                    indices = [indices[vert] for vert in f.vertices]
                     out.write(f"f {indices[0]} {indices[1]} {indices[2]}\n")
