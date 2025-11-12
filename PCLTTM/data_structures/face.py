@@ -6,6 +6,9 @@ from typing import Tuple
 class Face:
     def __init__(self, vertices: Tuple[Vertex, Vertex, Vertex], mesh = None):
         self.vertices = vertices  # (v1, v2, v3)
+        if vertices is None:
+            print("Warning: Face created with None vertices")
+            raise ValueError("Face cannot be created with None vertices")
         self.mesh = mesh
 
     # Face related functions

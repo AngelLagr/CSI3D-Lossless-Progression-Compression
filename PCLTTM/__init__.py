@@ -22,6 +22,7 @@ class PCLTTM():
         self.mesh = MeshTopology.from_obj_file(file)
         for v in self.mesh.get_vertices():
             self.state_flags[v] = StateFlag.Free
+            self.retriangulator.retriangulation_tags[v] = constants.RetriangulationTag.Default
     
     def compress(self):
         if self.mesh is None:
@@ -59,6 +60,7 @@ class PCLTTM():
 
                 patch_vertices = patch.surrounding_vertices(current_gate.edge)
                 self.retriangulator.retriangulate(self.mesh, valence, current_gate, patch_vertices)
+            
 
         ######################################################
         # CLEANING PHASE

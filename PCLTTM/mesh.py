@@ -240,5 +240,5 @@ class MeshTopology:
                     if f in seen_faces:
                         continue
                     seen_faces.add(f)
-                    indices = [indices[vert] for vert in f.vertices]
-                    out.write(f"f {indices[0]} {indices[1]} {indices[2]}\n")
+                    indices_l = [indices[vert] for vert in f.vertices]
+                    out.write(f"f {indices_l[0]} {indices_l[1]} {indices_l[2]}\n")
