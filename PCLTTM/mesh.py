@@ -179,7 +179,7 @@ class MeshTopology:
 
             connected_faces = self.get_oriented_faces((fromV, toV))
             for face in connected_faces:
-                print(face, ":", hash(face))
+                #print(face, ":", hash(face))
                 faces.add(face)
 
         return faces
@@ -210,9 +210,9 @@ class MeshTopology:
 
             v2 = random.sample(list(self.active_state.vertex_connections[v1]), 1)[0]
             adjacent_vertex = self.get_oriented_vertices((v1, v2))
-            if adjacent_vertex[0] is not None:
+            if adjacent_vertex[0] is not None and self.can_remove_vertex(adjacent_vertex[0]):
                 return Gate((v1, v2), adjacent_vertex[0], self)
-            elif adjacent_vertex[1] is not None:
+            elif adjacent_vertex[1] is not None and self.can_remove_vertex(adjacent_vertex[1]):
                 return Gate((v2, v1), adjacent_vertex[1], self)
 
         return None

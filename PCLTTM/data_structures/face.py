@@ -8,7 +8,7 @@ class Face:
         self.vertices = vertices  # (v1, v2, v3)
         if vertices is None:
             print("Warning: Face created with None vertices")
-            raise ValueError("Face cannot be created with None vertices")
+            raise ValueError("Le nombre doit être positif")
         self.mesh = mesh
 
     # Face related functions

@@ -24,5 +24,5 @@ class Gate:
         return hash((frozenset(self.edge), self.front_vertex))
 
     def __repr__(self):
-        return f"Gate(edge={self.edge}, face={self.front_face_idx}, front_v={self.front_vertex_idx})"
+        return f"Gate(edge={self.edge}, front_v={self.front_vertex})"
 
