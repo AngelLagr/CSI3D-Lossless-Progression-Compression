@@ -12,12 +12,17 @@ if sys.version_info[0] < 3:
     from SimpleHTTPServer import SimpleHTTPRequestHandler
     from urllib import quote, unquote
     from cStringIO import StringIO
+    import cgi as _cgi
+
+    def html_escape(s):
+        return _cgi.escape(s)
 else:
     import http.server as BaseHTTPServer
     from http.server import SimpleHTTPRequestHandler
     from socketserver import ThreadingMixIn
     from urllib.parse import quote, unquote
-    from io import BytesIO as cStringIO
+    from io import StringIO
+    from html import escape as html_escape
 
 import os
 from os.path import (join, exists, abspath, split, splitdrive, isdir)
@@ -27,7 +32,6 @@ import glob
 from zipfile import ZipFile
 from posixpath import normpath
 import re
-import cgi
 import threading
 import socket
 import errno
@@ -64,7 +68,8 @@ class RequestHandler(SimpleHTTPRequestHandler):
         buf_length = 64 * 1024
         bytes_copied = 0
         while bytes_copied < left_to_copy:
-            read_buf = in_file.read(min(buf_length, left_to_copy - bytes_copied))
+            read_buf = in_file.read(
+                min(buf_length, left_to_copy - bytes_copied))
             if len(read_buf) == 0:
                 break
             out_file.write(read_buf)
@@ -154,9 +159,10 @@ class RequestHandler(SimpleHTTPRequestHandler):
             return None
         list.sort(key=lambda a: a.lower())
         f = StringIO()
-        displaypath = cgi.escape(unquote(self.path))
+        displaypath = html_escape(unquote(self.path))
         f.write('<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">')
-        f.write("<html>\n<title>Directory listing for %s</title>\n" % displaypath)
+        f.write("<html>\n<title>Directory listing for %s</title>\n" %
+                displaypath)
         f.write("<body>\n<h2>Directory listing for %s</h2>\n" % displaypath)
         f.write("<hr>\n<ul>\n")
         for name in list:
@@ -169,8 +175,8 @@ class RequestHandler(SimpleHTTPRequestHandler):
             if os.path.islink(fullname):
                 displayname = name + "@"
                 # Note: a link to a directory displays with @ and links with /
-            f.write('<li><a href="%s">%s</a>\n'
-                    % (quote(linkname), cgi.escape(displayname)))
+                f.write('<li><a href="%s">%s</a>\n'
+                        % (quote(linkname), html_escape(displayname)))
         f.write("</ul>\n<hr>\n</body>\n</html>\n")
         length = f.tell()
         f.seek(0)
@@ -193,7 +199,8 @@ class RequestHandler(SimpleHTTPRequestHandler):
         for word in words:
             drive, word = splitdrive(word)
             head, word = split(word)
-            if word in (curdir, pardir): continue
+            if word in (curdir, pardir):
+                continue
             path = join(path, word)
         return path
 

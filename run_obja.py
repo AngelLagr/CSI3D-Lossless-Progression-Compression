@@ -1,8 +1,11 @@
+import numpy as np
+from base_files.decimate import Decimater
+
 def main():
     """
     Runs the program on the model given as parameter.
     """
-    np.seterr(invalid = 'raise')
+    np.seterr(invalid='raise')
     model = Decimater()
     model.parse_file('example/suzanne.obj')
 

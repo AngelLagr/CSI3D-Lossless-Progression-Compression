@@ -1,9 +1,9 @@
 class DecimationCode:
     def __init__(self):
         self.valence_code = -1
-        self.residual = (0, 0, 0)
-        self.target_vertex = -1 # Mutually exclusive with target_face
-        self.target_face = -1
+        self.residual = (0.0, 0.0, 0.0)
+        self.target_vertex = None  # type: Vertex | None
+        self.target_face = None    # type: Face | None
 
     def clean(self):
         target = self._target()
@@ -12,11 +12,10 @@ class DecimationCode:
         else:
             self.valence_code = 3
 
-    def _target(self) -> "Face|Vertex":
-        if self.target_vertex != -1:
+    def _target(self):  # -> "Face | Vertex | None"
+        if self.target_vertex is not None:
             return self.target_vertex
-        elif self.target_face != -1:
+        elif self.target_face is not None:
             return self.target_face
         else:
             return None
-

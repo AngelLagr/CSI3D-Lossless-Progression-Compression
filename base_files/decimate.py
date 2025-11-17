@@ -1,67 +1,79 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-import obja
 import numpy as np
-import sys
 
-class Decimater(obja.Model):
+from .mesh import MeshTopology
+from .obja_parser import ObjaWriter
+
+
+class Decimater:
     """
-    A simple class that decimates a 3D model stupidly.
+    Very simple 'decimater' that does not really decimate:
+    it just rewrites the mesh into OBJA format.
+
+    This is a good smoke test for the whole pipeline:
+    - parse OBJ -> MeshTopology
+    - write OBJA with ObjaWriter
     """
+
     def __init__(self):
-        super().__init__()
-        self.deleted_faces = set()
+        self.mesh: MeshTopology | None = None
 
+    # ------------------------------------------------------------------
+    # Loading
+    # ------------------------------------------------------------------
+    def parse_file(self, path: str):
+        """
+        Load a Wavefront OBJ file and build the mesh topology.
+        """
+        self.mesh = MeshTopology.from_obj_file(path)
+
+    # ------------------------------------------------------------------
+    # "Decimation" / output
+    # ------------------------------------------------------------------
     def contract(self, output):
         """
-        Decimates the model stupidly, and write the resulting obja in output.
+        Write the current mesh to OBJA format using ObjaWriter.
+
+        For now, this is a no-op "decimation": we output all vertices
+        and faces as-is. Once everything works, you can plug in your
+        real decimation/progression code here.
         """
-        operations = []
+        if self.mesh is None:
+            raise RuntimeError("Mesh not loaded. Call parse_file() first.")
 
-        for (vertex_index, vertex) in enumerate(self.vertices):
-            operations.append(('ev', vertex_index, vertex + 0.25))
+        writer = ObjaWriter(output, random_color=True)
 
-        # Iterate through the vertex
-        for (vertex_index, vertex) in enumerate(self.vertices):
+        # 1) Collect vertices in a stable order and index them
+        vertices = list(self.mesh.get_vertices())
+        index_by_vertex = {v: idx for idx, v in enumerate(vertices)}
 
-            # Iterate through the faces
-            for (face_index, face) in enumerate(self.faces):
+        # Write vertices
+        for idx, v in enumerate(vertices):
+            x, y, z = v.position
+            writer.add_vertex(idx, (x, y, z))
 
-                # Delete any face related to this vertex
-                if face_index not in self.deleted_faces:
-                    if vertex_index in [face.a,face.b,face.c]:
-                        self.deleted_faces.add(face_index)
-                        # Add the instruction to operations stack
-                        operations.append(('face', face_index, face))
+        # 2) Collect unique faces and write them
+        seen_faces = set()
+        face_index = 0
 
-            # Delete the vertex
-            operations.append(('vertex', vertex_index, vertex))
+        for v in vertices:
+            faces = self.mesh.get_faces(v)
+            for f in faces:
+                if f in seen_faces:
+                    continue
+                seen_faces.add(f)
 
-        # To rebuild the model, run operations in reverse order
-        operations.reverse()
+                a, b, c = f.vertices
 
-        # Write the result in output file
-        output_model = obja.Output(output, random_color=True)
+                # Minimal object with attributes a, b, c as expected by ObjaWriter
+                class FaceObj:
+                    pass
 
-        for (ty, index, value) in operations:
-            if ty == "vertex":
-                output_model.add_vertex(index, value)
-            elif ty == "face":
-                output_model.add_face(index, value)   
-            else:
-                output_model.edit_vertex(index, value)
+                face_obj = FaceObj()
+                face_obj.a = index_by_vertex[a]
+                face_obj.b = index_by_vertex[b]
+                face_obj.c = index_by_vertex[c]
 
-def main():
-    """
-    Runs the program on the model given as parameter.
-    """
-    np.seterr(invalid = 'raise')
-    model = Decimater()
-    model.parse_file('example/suzanne.obj')
-
-    with open('example/suzanne.obja', 'w') as output:
-        model.contract(output)
-
-
-if __name__ == '__main__':
-    main()
+                writer.add_face(face_index, face_obj)
+                face_index += 1
