@@ -1,98 +1,255 @@
-from .retriangulator import Retriangulator
-from .data_structures import * 
-from typing import List, Tuple, Optional, Set, Dict, override
-from .mesh import MeshTopology
-from . import constants
-# ============================================================================
-# ALGORITHM IMPLEMENTATION
-# ============================================================================
+from typing import List, Optional, Dict, Set
 
-class PCLTTM():
+from .retriangulator import Retriangulator
+from .data_structures import Vertex, Gate
+from .mesh import MeshTopology
+from .data_structures.constants import StateFlag, RetriangulationTag
+
+
+class PCLTTM:
     """
     Implements the valence-driven conquest algorithm from Alliez-Desbrun 2001.
     """
 
     def __init__(self):
         self.mesh: Optional[MeshTopology] = None
-        self.state_flags = dict() # Hash(Vertex) -> State flag (e.g., CONQUERED, TO_BE_CONQUERED, FREE)
+        # Hash(Vertex) -> StateFlag (Free, Conquered, ...)
+        self.state_flags: Dict[Vertex, StateFlag] = {}
         self.retriangulator = Retriangulator()
-        
 
-    def parse_file(self, file: str):
+    # ----------------------------------------------------------------------
+    # Helpers
+    # ----------------------------------------------------------------------
+
+    def set_vertex_state(self, v: Vertex, state: StateFlag) -> None:
+        self.state_flags[v] = state
+
+    # ----------------------------------------------------------------------
+    # Mesh loading
+    # ----------------------------------------------------------------------
+
+    def parse_file(self, file: str) -> None:
+        """
+        Parse an OBJ/OBJA file and initialize the mesh and states.
+        """
         self.mesh = MeshTopology.from_obj_file(file)
         for v in self.mesh.get_vertices():
             self.state_flags[v] = StateFlag.Free
-    
-    def compress(self):
+            # default retriangulation tag
+            self.retriangulator.retriangulation_tags[v] = RetriangulationTag.Default
+
+    # ----------------------------------------------------------------------
+    # Main compression routine
+    # ----------------------------------------------------------------------
+
+    def compress(self) -> None:
         if self.mesh is None:
             raise ValueError("Mesh not loaded. Please parse a file first.")
 
+        # ------------------------------------------------------------------
+        # Initial gate selection
+        # ------------------------------------------------------------------
         initial_gate = self.mesh.get_random_gate()
+        if initial_gate is None:
+            raise RuntimeError("Could not find an initial gate in the mesh.")
 
-        self.retriangulator.retriangulation_tags[initial_gate.edge[0]] = RetriangulationTag.Plus
-        self.retriangulator.retriangulation_tags[initial_gate.edge[1]] = RetriangulationTag.Minus
+        # Tag the two vertices of the initial gate
+        v_plus, v_minus = initial_gate.edge
+        self.retriangulator.retriangulation_tags[v_plus] = RetriangulationTag.Plus
+        self.retriangulator.retriangulation_tags[v_minus] = RetriangulationTag.Minus
 
-        ######################################################
+        # ==================================================================
         # DECIMATION PHASE
-        ######################################################
-        FiFo = [initial_gate]
-        while FiFo != []:
+        # ==================================================================
+        FiFo: List[Gate] = [initial_gate]
+        visited_gates: Set[Gate] = set()
+
+        while FiFo:
             print("Remaining gates in FiFo:", len(FiFo))
             current_gate = FiFo.pop(0)
+
             left_vertex, right_vertex = current_gate.edge
             center_vertex = current_gate.front_vertex
-            valence = center_vertex.valence()
-            vertex_state = self.state_flags[current_gate.front_vertex]
 
-            print(valence, vertex_state, self.mesh.can_remove_vertex(center_vertex)) 
-            if (valence in [3,4,5,6]) and (vertex_state == constants.StateFlag.Free) and (self.mesh.can_remove_vertex(center_vertex)):
+            vertex_state = self.state_flags.get(center_vertex, StateFlag.Free)
+
+            # ------------------------------------------------------------------
+            # IMPORTANT: skip gates whose front vertex is already conquered
+            # ------------------------------------------------------------------
+            if vertex_state == StateFlag.Conquered:
+                # This gate lies behind the conquest front, ignore it.
+                continue
+
+            # Optional: avoid processing the exact same gate twice
+            if current_gate in visited_gates:
+                continue
+            visited_gates.add(current_gate)
+
+            # valence is taken from the mesh topology
+            valence = center_vertex.valence()
+
+            print(
+                valence, "valence ", center_vertex,
+                "state:", vertex_state, left_vertex, right_vertex
+            )
+
+            can_remove = self.mesh.can_remove_vertex(center_vertex)
+
+            # ------------------------------------------------------------------
+            # PROPER PATCH / DECIMATION (for free vertices)
+            # ------------------------------------------------------------------
+            if (
+                vertex_state == StateFlag.Free
+                and valence in [3, 4, 5, 6]
+                and can_remove
+            ):
+                # Original logic: get patch around the center vertex
                 patch = self.mesh.get_patch(center_vertex)
 
-                # conquer all the vertexes in the patch
+                if patch is None or patch.valence() == 0:
+                    # Degenerate case: treat as null patch, but do NOT propagate
+                    print("NULL PATCH (empty) for vertex:", center_vertex)
+                    self.set_vertex_state(center_vertex, StateFlag.Conquered)
+                    continue
+
+                # Get output gates and ring vertices
                 out_gates = patch.output_gates(current_gate.edge)
                 print(len(out_gates), "gates in the patch")
-                for gate in out_gates:
-                    (v1, v2) = gate.edge
-                    self.state_flags[v1] = constants.StateFlag.Conquered
-                    self.state_flags[v2] = constants.StateFlag.Conquered
-                    FiFo.append(gate)
 
                 patch_vertices = patch.surrounding_vertices(current_gate.edge)
-                self.retriangulator.retriangulate(self.mesh, valence, current_gate, patch_vertices)
 
-        ######################################################
-        # CLEANING PHASE
-        ######################################################
-        FiFo = [initial_gate]
-        while FiFo != []:
-            print("Remaining gates in FiFo:", len(FiFo))
+                # Perform local retriangulation
+                self.retriangulator.retriangulate(
+                    self.mesh, valence, current_gate, patch_vertices
+                )
 
-            current_gate = FiFo.pop(0)
-            left_vertex, right_vertex = current_gate.edge
-            valence = current_gate.front_vertex.valence()
-            if (valence in [3]) and (current_gate.front_vertex.state_flag() == constants.StateFlag.Free) and (self.mesh.can_remove_vertex(current_gate.front_vertex)):
-                # todo
-                patch = self.mesh.get_patch(current_gate).output_gates()
-
-                # conquer all the vertexes in the patch
-                for gate in patch:
-                    (v1, v2) = gate.edge
-                    self.set_vertex_state(v1, constants.StateFlag.Conquered)
-                    self.set_vertex_state(v2, constants.StateFlag.Conquered)
+                # Mark boundary vertices as conquered and enqueue gates
+                for gate in out_gates[:-1]:
+                    v1, v2 = gate.edge
+                    self.set_vertex_state(v1, StateFlag.Conquered)
+                    self.set_vertex_state(v2, StateFlag.Conquered)
                     FiFo.append(gate)
-                
-                # todo
-                Retriangulator.retriangulate(self.mesh, valence, current_gate, patch.oriented_vertices())
 
+                # Center vertex is now conquered (removed / retriangulated)
+                self.set_vertex_state(center_vertex, StateFlag.Conquered)
 
-        # for debug just to see the result in the first step
+            # ------------------------------------------------------------------
+            # NULL PATCH (for free vertices that cannot be decimated cleanly)
+            # ------------------------------------------------------------------
+            else:
+                # We are here with a vertex that is still Free but not suitable
+                # for normal decimation (wrong valence or cannot be removed).
+                print("NULL PATCH for vertex:", center_vertex)
+                self.set_vertex_state(center_vertex, StateFlag.Conquered)
+
+                # Get oriented neighbors to propagate the "front"
+                oriented_v1 = self.mesh.get_oriented_vertices(
+                    (left_vertex, center_vertex)
+                )
+                oriented_v2 = self.mesh.get_oriented_vertices(
+                    (center_vertex, right_vertex)
+                )
+
+                # Left side
+                if oriented_v1[0] is not None:
+                    next_v = oriented_v1[0]
+                    # Only propagate if the next front vertex is still Free
+                    if self.state_flags.get(next_v, StateFlag.Free) == StateFlag.Free:
+                        gate1 = Gate(
+                            (left_vertex, center_vertex),
+                            next_v,
+                            self.mesh
+                        )
+                        FiFo.append(gate1)
+
+                # Right side
+                if oriented_v2[1] is not None:
+                    next_v = oriented_v2[1]
+                    if self.state_flags.get(next_v, StateFlag.Free) == StateFlag.Free:
+                        gate2 = Gate(
+                            (center_vertex, right_vertex),
+                            next_v,
+                            self.mesh
+                        )
+                        FiFo.append(gate2)
+
+        # ==================================================================
+        # CLEANING PHASE (optional refinement)
+        # ==================================================================
+        FiFo = [initial_gate]
+        visited_gates.clear()
+
+        while FiFo:
+            print("Remaining gates in FiFo (cleaning phase):", len(FiFo))
+            current_gate = FiFo.pop(0)
+
+            if current_gate in visited_gates:
+                continue
+            visited_gates.add(current_gate)
+
+            left_vertex, right_vertex = current_gate.edge
+            center_vertex = current_gate.front_vertex
+
+            valence = center_vertex.valence()
+            vertex_state = self.state_flags.get(center_vertex, StateFlag.Free)
+
+            # Only attempt cleaning on still-free vertices
+            if vertex_state != StateFlag.Free:
+                continue
+
+            can_remove = self.mesh.can_remove_vertex(center_vertex)
+
+            if valence == 3 and can_remove:
+                patch = self.mesh.get_patch(center_vertex)
+                if patch is None or patch.valence() == 0:
+                    self.set_vertex_state(center_vertex, StateFlag.Conquered)
+                    continue
+
+                out_gates = patch.output_gates(current_gate.edge)
+                patch_vertices = patch.surrounding_vertices(current_gate.edge)
+
+                self.retriangulator.retriangulate(
+                    self.mesh, valence, current_gate, patch_vertices
+                )
+
+                for gate in out_gates:
+                    v1, v2 = gate.edge
+                    self.set_vertex_state(v1, StateFlag.Conquered)
+                    self.set_vertex_state(v2, StateFlag.Conquered)
+                    FiFo.append(gate)
+
+                self.set_vertex_state(center_vertex, StateFlag.Conquered)
+
+            else:
+                # No special cleaning, just propagate conquest
+                self.set_vertex_state(center_vertex, StateFlag.Conquered)
+
+                oriented_v1 = self.mesh.get_oriented_vertices(
+                    (left_vertex, center_vertex)
+                )
+                oriented_v2 = self.mesh.get_oriented_vertices(
+                    (center_vertex, right_vertex)
+                )
+
+                if oriented_v1[0] is not None:
+                    next_v = oriented_v1[0]
+                    if self.state_flags.get(next_v, StateFlag.Free) == StateFlag.Free:
+                        gate1 = Gate(
+                            (left_vertex, center_vertex),
+                            next_v,
+                            self.mesh
+                        )
+                        FiFo.append(gate1)
+
+                if oriented_v2[1] is not None:
+                    next_v = oriented_v2[1]
+                    if self.state_flags.get(next_v, StateFlag.Free) == StateFlag.Free:
+                        gate2 = Gate(
+                            (center_vertex, right_vertex),
+                            next_v,
+                            self.mesh
+                        )
+                        FiFo.append(gate2)
+
+        # Debug: export the result
         self.mesh.export_to_obj("output.obj")
-
-
-                
-
-
-
-    
-        
-
