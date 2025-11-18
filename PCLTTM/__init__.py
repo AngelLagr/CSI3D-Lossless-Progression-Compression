@@ -42,16 +42,29 @@ class PCLTTM:
     # Main compression routine
     # ----------------------------------------------------------------------
 
-    def __initial_gate_for_crude_sphere(self) -> Gate:
+    def __initial_gate_for_crude_sphere_4(self) -> Gate:
         initial_left_vertex = Vertex((6, 0, 3), self.mesh)
-        initial_right_vertex = Vertex((5, 3, 3), self.mesh)
+        initial_right_vertex = Vertex((0, 6, 3), self.mesh)
         initial_front_vertex = Vertex((0, 0, 10), self.mesh)
         return Gate((initial_left_vertex, initial_right_vertex), initial_front_vertex, self.mesh)
 
+<<<<<<< HEAD
     def __initial_gate_for_test(self) -> Gate:
         initial_left_vertex = Vertex((3,0,0), self.mesh)
         initial_right_vertex = Vertex((4,2,0), self.mesh)
         initial_front_vertex = Vertex((2,2,0), self.mesh)
+=======
+    def __initial_gate_for_crude_sphere_5(self) -> Gate:
+        initial_left_vertex = Vertex((6, 0, 3), self.mesh)
+        initial_right_vertex = Vertex((2, 6, 3), self.mesh)
+        initial_front_vertex = Vertex((0, 0, 10), self.mesh)
+        return Gate((initial_left_vertex, initial_right_vertex), initial_front_vertex, self.mesh)
+
+    def __initial_gate_for_crude_sphere_6(self) -> Gate:
+        initial_left_vertex = Vertex((6, 0, 3), self.mesh)
+        initial_right_vertex = Vertex((3, 5, 3), self.mesh)
+        initial_front_vertex = Vertex((0, 0, 10), self.mesh)
+>>>>>>> a560321fab0fe04129a312967d866b2b173e9df6
         return Gate((initial_left_vertex, initial_right_vertex), initial_front_vertex, self.mesh)
 
 
@@ -63,15 +76,19 @@ class PCLTTM:
         # Initial gate selection
         # ------------------------------------------------------------------
         #initial_gate = self.mesh.get_random_gate()
+<<<<<<< HEAD
         initial_gate = self.__initial_gate_for_test()
+=======
+        initial_gate = self.__initial_gate_for_crude_sphere_6()
+>>>>>>> a560321fab0fe04129a312967d866b2b173e9df6
           
         if initial_gate is None:
             raise RuntimeError("Could not find an initial gate in the mesh.")
 
         # Tag the two vertices of the initial gate
-        v_plus, v_minus = initial_gate.edge
-        self.retriangulator.retriangulation_tags[v_plus] = RetriangulationTag.Plus
+        v_minus, v_plus = initial_gate.edge
         self.retriangulator.retriangulation_tags[v_minus] = RetriangulationTag.Minus
+        self.retriangulator.retriangulation_tags[v_plus] = RetriangulationTag.Plus
 
         # ==================================================================
         # DECIMATION PHASE
@@ -79,8 +96,9 @@ class PCLTTM:
         FiFo: List[Gate] = [initial_gate]
         visited_gates: Set[Gate] = set()
 
+        iteration = 1
         while FiFo:
-            print("Remaining gates in FiFo:", len(FiFo))
+            #print("Remaining gates in FiFo:", len(FiFo))
             current_gate = FiFo.pop(0)
 
             left_vertex, right_vertex = current_gate.edge
@@ -120,6 +138,9 @@ class PCLTTM:
             ):
                 # Original logic: get patch around the center vertex
                 patch = self.mesh.get_patch(center_vertex)
+                print("Processing patch for vertex:", center_vertex, "valence:", valence, "with faces:")
+                for f in patch.faces:
+                    print("\t- ", f)
 
                 if patch is None or patch.valence() == 0:
                     # Degenerate case: treat as null patch, but do NOT propagate
@@ -133,6 +154,7 @@ class PCLTTM:
 
                 patch_vertices = patch.surrounding_vertices(current_gate.edge)
 
+                print("Remove patch central vertex:", center_vertex)
                 # Perform local retriangulation
                 self.retriangulator.retriangulate(
                     self.mesh, valence, current_gate, patch_vertices
@@ -187,8 +209,15 @@ class PCLTTM:
                             self.mesh
                         )
                         FiFo.append(gate2)
+            self.mesh.export_to_obj(f"decimation_step_{iteration}.obj")
+            iteration += 1
 
-        # ==================================================================
+        #self._cleaning_phase(initial_gate, visited_gates)
+
+        # Debug: export the result
+
+    def _cleaning_phase(self, initial_gate, visited_gates) -> None:
+                # ==================================================================
         # CLEANING PHASE (optional refinement)
         # ==================================================================
         FiFo = [initial_gate]
@@ -265,6 +294,3 @@ class PCLTTM:
                             self.mesh
                         )
                         FiFo.append(gate2)
-
-        # Debug: export the result
-        self.mesh.export_to_obj("output.obj")

@@ -48,6 +48,7 @@ class Retriangulator:
             left_vertex, RetriangulationTag.Default)
         right_tag = self.retriangulation_tags.get(
             right_vertex, RetriangulationTag.Default)
+        print(f"Retriangulate from gate: {left_vertex} ({left_tag}) -> {right_vertex} ({right_tag})")
 
         front_vertex = current_gate.front_vertex
 
