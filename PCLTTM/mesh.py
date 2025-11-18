@@ -369,6 +369,11 @@ class MeshTopology:
             for face in connected_faces:
                 if face is not None:
                     faces.add(face)
+<<<<<<< HEAD
+                else:
+                    print("MeshTopology: incomplete face information detected.")
+=======
+>>>>>>> a560321fab0fe04129a312967d866b2b173e9df6
 
         return faces
 

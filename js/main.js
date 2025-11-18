@@ -5,7 +5,7 @@ animate();
 
 function init() {
 
-    let url = (document.URL.split('?')[1] || "example/crude_sphere.obj");
+    let url = (document.URL.split('?')[1] || "example/test.obj");
 
     loader = new Loader(url, 1024, 20);
     loader.start(function(elements) {
