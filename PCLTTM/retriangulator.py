@@ -1,4 +1,6 @@
 from typing import List, Tuple, Dict
+
+from PCLTTM.data_structures.patch import Patch
 from .data_structures.face import Face
 from .data_structures.vertex import Vertex
 from .data_structures.gate import Gate
@@ -16,6 +18,9 @@ class Retriangulator:
 
     def __init__(self):
         self.retriangulation_tags = dict()  # Hash(Vertex) -> Retriangulation tag (+ or -)
+
+    def standarize_retriangulation(self, patch: Patch) -> List[Face]:
+        pass
 
     def retriangulate(
         self,
@@ -100,7 +105,7 @@ class Retriangulator:
 
     def triangulate_table(
         self, mesh, front_vertex: Vertex,
-        patch_oriented_vertex: List[int],
+        patch_oriented_vertex: List[Vertex],
         left_tag, right_tag,
         valence: int,
     ) -> List[Face]:
@@ -116,7 +121,7 @@ class Retriangulator:
             return []
 
         pov = patch_oriented_vertex  # alias court
-
+        print(pov)
         # python 3.10+ pattern matching
         match (left_tag, right_tag):
             case (RetriangulationTag.Plus, RetriangulationTag.Minus):
@@ -136,9 +141,9 @@ class Retriangulator:
                         mesh.add_edge(pov[5], pov[1])
                         mesh.add_edge(pov[3], pov[1])
                         mesh.add_edge(pov[5], pov[3])
-                        mesh.set_orientation((pov[1], pov[5]), pov[0])
-                        mesh.set_orientation((pov[3], pov[1]), pov[2])
-                        mesh.set_orientation((pov[5], pov[3]), pov[4])
+                        mesh.set_orientation((pov[1], pov[5]), pov[3])
+                        mesh.set_orientation((pov[5], pov[3]), pov[1])
+                        mesh.set_orientation((pov[3], pov[1]), pov[5])
                     case _:
                         pass
             case (RetriangulationTag.Minus, RetriangulationTag.Plus):
@@ -158,9 +163,9 @@ class Retriangulator:
                         mesh.add_edge(pov[0], pov[2])
                         mesh.add_edge(pov[2], pov[4])
                         mesh.add_edge(pov[0], pov[4])
-                        mesh.set_orientation((pov[2], pov[0]), pov[1])
-                        mesh.set_orientation((pov[4], pov[2]), pov[3])
-                        mesh.set_orientation((pov[0], pov[4]), pov[5])
+                        mesh.set_orientation((pov[2], pov[0]), pov[4])
+                        mesh.set_orientation((pov[2], pov[4]), pov[0])
+                        mesh.set_orientation((pov[4], pov[0]), pov[2])
                     case _:
                         pass
             case (RetriangulationTag.Plus, RetriangulationTag.Plus):
@@ -180,9 +185,9 @@ class Retriangulator:
                         mesh.add_edge(pov[0], pov[2])
                         mesh.add_edge(pov[2], pov[4])
                         mesh.add_edge(pov[0], pov[4])
-                        mesh.set_orientation((pov[2], pov[0]), pov[1])
-                        mesh.set_orientation((pov[4], pov[2]), pov[3])
-                        mesh.set_orientation((pov[0], pov[4]), pov[5])
+                        mesh.set_orientation((pov[2], pov[0]), pov[4])
+                        mesh.set_orientation((pov[2], pov[4]), pov[0])
+                        mesh.set_orientation((pov[4], pov[0]), pov[2])
                     case _:
                         pass
             case _:  # (RetriangulationTag.Minus, RetriangulationTag.Minus)
@@ -199,8 +204,8 @@ class Retriangulator:
                         mesh.add_edge(pov[5], pov[1])
                         mesh.add_edge(pov[3], pov[1])
                         mesh.add_edge(pov[5], pov[3])
-                        mesh.set_orientation((pov[1], pov[5]), pov[0])
-                        mesh.set_orientation((pov[3], pov[1]), pov[2])
-                        mesh.set_orientation((pov[5], pov[3]), pov[4])
+                        mesh.set_orientation((pov[1], pov[5]), pov[3])
+                        mesh.set_orientation((pov[5], pov[3]), pov[1])
+                        mesh.set_orientation((pov[3], pov[1]), pov[5])
                     case _:
                         pass
