@@ -142,7 +142,12 @@ class MeshTopology:
         
         other_vertex = next((v for v in common_neighbours if v != third_vertex), None)
         self.active_state.orientations[from_to] = (third_vertex, other_vertex)
-        self.active_state.orientations[(toV, fromV)] = (other_vertex, third_vertex) 
+        self.active_state.orientations[(toV, fromV)] = (other_vertex, third_vertex)
+
+        self.active_state.orientations[(toV, third_vertex)] = (fromV, self.active_state.orientations.get((toV, third_vertex), (None, None))[1])
+        self.active_state.orientations[(third_vertex, fromV)] = (toV, self.active_state.orientations.get((third_vertex, fromV), (None, None))[1])
+        self.active_state.orientations[(other_vertex, toV)] = (fromV, self.active_state.orientations.get((other_vertex, toV), (None, None))[1])
+        self.active_state.orientations[(fromV, other_vertex)] = (toV, self.active_state.orientations.get((fromV, other_vertex), (None, None))[1])
         return True
 
     def get_connected_vertices(self, vertex: Vertex) -> Set[Vertex]:
@@ -179,7 +184,6 @@ class MeshTopology:
 
             connected_faces = self.get_oriented_faces((fromV, toV))
             for face in connected_faces:
-                print(face, ":", hash(face))
                 faces.add(face)
 
         return faces
@@ -210,9 +214,9 @@ class MeshTopology:
 
             v2 = random.sample(list(self.active_state.vertex_connections[v1]), 1)[0]
             adjacent_vertex = self.get_oriented_vertices((v1, v2))
-            if adjacent_vertex[0] is not None:
+            if adjacent_vertex[0] is not None and self.can_remove_vertex(adjacent_vertex[0]):
                 return Gate((v1, v2), adjacent_vertex[0], self)
-            elif adjacent_vertex[1] is not None:
+            elif adjacent_vertex[1] is not None and self.can_remove_vertex(adjacent_vertex[1]):
                 return Gate((v2, v1), adjacent_vertex[1], self)
 
         return None
