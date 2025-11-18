@@ -117,7 +117,7 @@ def write_obj_file(filename: str, vertices: List[Vertex], faces: List[Face]) -> 
             f.write(f"v {v[0]} {v[1]} {v[2]}\n")
         for face in faces:
             f.write("f " + " ".join(str(i + 1) for i in face) + "\n")
-    print(f"✔ Written:", filename)
+    print(f"Written:", filename)
 
 
 if __name__ == "__main__":

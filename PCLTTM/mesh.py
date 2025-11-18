@@ -358,11 +358,13 @@ class MeshTopology:
                 break
 
             connected_faces = self.get_oriented_faces((fromV, toV))
+            if connected_faces == (None, None):
+                print("Warning: Missing face for edge", (fromV, toV))
+                continue
+
             for face in connected_faces:
                 if face is not None:
                     faces.add(face)
-                else:
-                    raise RuntimeError("MeshTopology: incomplete face information detected.")
 
         return faces
 
@@ -418,35 +420,6 @@ class MeshTopology:
     # Simple OBJ exporter (for debug)
     # ----------------------------------------------------------------------
 
-    def _vertex_coords(self, v: Vertex):
-        """
-        Try to extract (x, y, z) from a Vertex object.
-
-        IMPORTANT: adapt this to match your actual Vertex implementation
-        in data_structures.py.
-        """
-        # 1) Common patterns: coords / position / pos / p
-        for attr in ("coords", "position", "pos", "p"):
-            if hasattr(v, attr):
-                c = getattr(v, attr)
-                return float(c[0]), float(c[1]), float(c[2])
-
-        # 2) If it has explicit x, y, z
-        if all(hasattr(v, a) for a in ("x", "y", "z")):
-            return float(v.x), float(v.y), float(v.z)
-
-        # 3) If the vertex is indexable (like a tuple/list/np.array)
-        try:
-            return float(v[0]), float(v[1]), float(v[2])
-        except Exception:
-            pass
-
-        # 4) Last resort: raise an explicit error so you can fix it
-        raise TypeError(
-            f"Don't know how to extract coordinates from Vertex: {v!r}. "
-            "Check data_structures.Vertex and update _vertex_coords()."
-        )
-
     def export_to_obj(self, path: str) -> None:
         """
         Export the current mesh topology to a simple OBJ file.
@@ -456,13 +429,13 @@ class MeshTopology:
         with deduplication so each face is written only once.
         """
         # Collect vertices
-        vertices = list(self.get_vertices())
+        vertices = sorted(self.get_vertices())
         indices = {v: i + 1 for i, v in enumerate(vertices)}
 
         with open(path, "w") as file_obj:
             # ---- write vertices ----
             for v in vertices:
-                x, y, z = self._vertex_coords(v)
+                x, y, z = v.position
                 file_obj.write(f"v {x} {y} {z}\n")
 
             # ---- collect unique faces ----
