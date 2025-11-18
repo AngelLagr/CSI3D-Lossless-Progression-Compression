@@ -116,7 +116,7 @@ class Retriangulator:
         # On regarde si il y a un sommet taggÃ© '-', si c'est le cas, on relie les deux autres extrÃ©mitÃ©s
         # Sinon on relie le premier sommet avec le troisieme sommet du polygone
 
-        mesh.remove_vertex(front_vertex)
+        mesh.remove_vertex(front_vertex, force=True)
         if valence < 3 or valence > 6:
             return []
 
