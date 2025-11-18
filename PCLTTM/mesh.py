@@ -274,14 +274,16 @@ class MeshTopology:
         if (fromV not in self.active_state.vertex_connections
             or toV not in self.active_state.vertex_connections):
             return False
-
-        common_neighbours = self.active_state.vertex_connections[fromV].intersection(
-            self.active_state.vertex_connections[toV]
-        )
+        
+        
+        connected_to_from = self.active_state.vertex_connections[fromV]
+        connected_to_to = self.active_state.vertex_connections[toV]
+        common_neighbours = connected_to_from.intersection(connected_to_to)
 
         if len(common_neighbours) not in {1, 2}:
-            # Badly structured mesh, can't define the orientation
-            return False
+            print("Badly structured mesh, can't define the orientation")
+            print("Wrong number of common neighbours for edge", from_to, ": ", common_neighbours)
+        #    return False
 
         other_vertex = next(
             (v for v in common_neighbours if v != third_vertex),
@@ -302,8 +304,10 @@ class MeshTopology:
 
         self.active_state.orientations[(toV, third_vertex)] = (fromV, self.active_state.orientations.get((toV, third_vertex), (None, None))[1])
         self.active_state.orientations[(third_vertex, fromV)] = (toV, self.active_state.orientations.get((third_vertex, fromV), (None, None))[1])
-        self.active_state.orientations[(other_vertex, toV)] = (fromV, self.active_state.orientations.get((other_vertex, toV), (None, None))[1])
-        self.active_state.orientations[(fromV, other_vertex)] = (toV, self.active_state.orientations.get((fromV, other_vertex), (None, None))[1])
+        if other_vertex is not None:
+            self.active_state.orientations[(other_vertex, toV)] = (fromV, self.active_state.orientations.get((other_vertex, toV), (None, None))[1])
+            self.active_state.orientations[(fromV, other_vertex)] = (toV, self.active_state.orientations.get((fromV, other_vertex), (None, None))[1])
+        
         return True
 
     def get_connected_vertices(self, vertex: Vertex) -> Set[Vertex]:

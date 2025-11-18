@@ -95,7 +95,7 @@ class Patch:
         current_vertex = starting_edge[0]
 
         # Safety guard to avoid infinite loops in corrupted meshes
-        max_steps = len(remaining_faces) + 5
+        max_steps = len(remaining_faces)
 
         for _ in range(max_steps):
             # Find a face incident to both current_vertex and center_vertex
@@ -114,9 +114,9 @@ class Patch:
                 break
 
             # The "next" vertex is the third vertex of that face, not current_vertex nor center.
-            next_vertex = face.next_vertex(
-                (current_vertex, self.center_vertex))
+            next_vertex = face.next_vertex((current_vertex, self.center_vertex))
             if next_vertex is None:
+                print("Warning: could not find next vertex in face:", face)
                 break
 
             sequence.append(next_vertex)
@@ -194,7 +194,7 @@ class Patch:
                 # We only want one outside face per edge
                 break
 
-        return output_gates
+        return output_gates[1:]  # Exclude the input gate
 
     # ------------------------------------------------------------------
     # Internal functions

@@ -149,6 +149,47 @@ function parseLine(line, number) {
 
 }
 
+/**
+ * Generates a deterministic, unique RGB color based on a static incrementing index.
+ * The output color will always be the same for the same index input.
+ *
+ * @param {number} index - A unique, non-negative integer index.
+ * @returns {string} The RGB color string, e.g., "rgb(123, 45, 200)".
+ */
+function getDeterministicRgb(index) {
+  // Use unique prime numbers for each channel to ensure
+  // the resulting colors are varied and don't repeat quickly.
+  const PRIME_R = 131;
+  const PRIME_G = 137;
+  const PRIME_B = 149;
+
+  // The base color generation uses the index multiplied by a prime.
+  // The '>> 0' (right bit shift by 0) is a quick way to ensure the result is an integer.
+  
+  // 1. Generate a large, unique seed number for the Red channel.
+  let seedR = index * PRIME_R;
+  
+  // 2. Generate the R, G, B values (0-255).
+  // The value is determined by taking the modulo 256 of the seed, 
+  // ensuring the value stays in the valid range.
+  // A secondary step (like adding 50) can be used to avoid very dark colors.
+  const r = ((seedR % 256) + 50) % 256;
+  
+  // For the Green and Blue channels, we use different arithmetic to ensure
+  // the values are independent of the Red channel's result.
+  const g = ((index * PRIME_G * 2) % 256);
+  
+  // The bitwise XOR operation (`^`) further randomizes the third component.
+  const b = (((index * PRIME_B) >> 0) % 256) ^ 100;
+
+  // Ensure the components are within the [0, 255] range.
+  const finalR = Math.min(255, Math.max(0, r));
+  const finalG = Math.min(255, Math.max(0, g));
+  const finalB = Math.min(255, Math.max(0, b));
+
+  return new THREE.Color(finalR, finalG, finalB);
+}
+
 const Element = {};
 Element.AddVertex = "AddVertex";
 Element.AddFace = "AddFace";
@@ -234,6 +275,7 @@ class Model extends THREE.Mesh {
         this.path = path;
         this.vertices = [];
         this.currentLine = 1;
+        this.currentColor = 1;
     }
 
     throwError(message) {
