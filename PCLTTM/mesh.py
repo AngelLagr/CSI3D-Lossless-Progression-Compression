@@ -262,27 +262,23 @@ class MeshTopology:
     # Orientation helpers
     # ----------------------------------------------------------------------
 
-    def set_orientation(
-        self,
-        from_to: Tuple[Vertex, Vertex],
-        third_vertex: Vertex
-    ) -> bool:
-        """
+    """
         Set the orientation of an edge by specifying the "left" face's third vertex.
 
         from_to: (fromV, toV)
         third_vertex: vertex of the face (fromV, toV, third_vertex) for the left side.
         """
+    def set_orientation(self, from_to: Tuple[Vertex, Vertex], third_vertex: Vertex) -> bool:
+        
         fromV, toV = from_to
-        if (
-            fromV not in self.active_state.vertex_connections
-            or toV not in self.active_state.vertex_connections
-        ):
+        if (fromV not in self.active_state.vertex_connections
+            or toV not in self.active_state.vertex_connections):
             return False
 
         common_neighbours = self.active_state.vertex_connections[fromV].intersection(
             self.active_state.vertex_connections[toV]
         )
+
         if len(common_neighbours) not in {1, 2}:
             # Badly structured mesh, can't define the orientation
             return False
@@ -291,8 +287,18 @@ class MeshTopology:
             (v for v in common_neighbours if v != third_vertex),
             None,
         )
+        
+        opposite_side = (toV, fromV)
+        #if from_to in self.active_state.orientations:
+        #    print("Current orientation:", self.active_state.orientations[from_to])
+        #if opposite_side in self.active_state.orientations:
+        #    print("Current opposite orientation:", self.active_state.orientations[opposite_side])
+
         self.active_state.orientations[from_to] = (third_vertex, other_vertex)
-        self.active_state.orientations[(toV, fromV)] = (other_vertex, third_vertex)
+        self.active_state.orientations[opposite_side] = (other_vertex, third_vertex)
+
+        #print("Set orientation:", from_to, "->", self.active_state.orientations[from_to])
+        #print("Set opposite orientation:", opposite_side, "->", self.active_state.orientations[opposite_side])
 
         self.active_state.orientations[(toV, third_vertex)] = (fromV, self.active_state.orientations.get((toV, third_vertex), (None, None))[1])
         self.active_state.orientations[(third_vertex, fromV)] = (toV, self.active_state.orientations.get((third_vertex, fromV), (None, None))[1])

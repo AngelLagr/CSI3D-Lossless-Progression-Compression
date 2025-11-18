@@ -324,6 +324,7 @@ class Model extends THREE.Mesh {
 
                 f.normal = normal;
                 f.materialIndex = 0;
+                f.color = new THREE.Color(Math.random(), Math.random(), Math.random());
                 this.geometry.faces.push(f);
                 this.geometry.elementsNeedUpdate = true;
                 break;
