@@ -4,9 +4,6 @@ from typing import List, Tuple
 Vertex = Tuple[int, int, int]
 Face = List[int]
 
-# WARNING THIS HAS MANIFOLD VIOLATIONS
-
-
 def generate_three_layer_sphere_int(n: int,
                                     height: int = 20,
                                     radius: int = 10,
@@ -82,9 +79,9 @@ def generate_three_layer_sphere_int(n: int,
 
     # Top pole → upper ring
     for i in range(n):
-        a = upper_ring[i]
-        b = upper_ring[(i + 1) % n]
-        faces.append([top_index, a, b])
+        u1 = upper_ring[i]
+        u2 = upper_ring[(i + 1) % n]
+        faces.append([top_index, u1, u2])
 
     # Upper ring → middle ring
     for i in range(n):
@@ -92,8 +89,8 @@ def generate_three_layer_sphere_int(n: int,
         u2 = upper_ring[(i + 1) % n]
         m1 = middle_ring[i]
         m2 = middle_ring[(i + 1) % n]
-        faces.append([u1, u2, m2])
-        faces.append([u1, m2, m1])
+        faces.append([u2, u1, m2])
+        faces.append([m2, u1, m1])
 
     # Middle ring → lower ring
     for i in range(n):
@@ -101,14 +98,14 @@ def generate_three_layer_sphere_int(n: int,
         m2 = middle_ring[(i + 1) % n]
         l1 = lower_ring[i]
         l2 = lower_ring[(i + 1) % n]
-        faces.append([m1, m2, l2])
-        faces.append([m1, l2, l1])
+        faces.append([m2, m1, l2])
+        faces.append([l2, m1, l1])
 
     # Lower ring → bottom pole
     for i in range(n):
-        a = lower_ring[i]
-        b = lower_ring[(i + 1) % n]
-        faces.append([bottom_index, b, a])
+        l1 = lower_ring[i]
+        l2 = lower_ring[(i + 1) % n]
+        faces.append([bottom_index, l2, l1])
 
     return vertices, faces
 
@@ -124,5 +121,5 @@ def write_obj_file(filename: str, vertices: List[Vertex], faces: List[Face]) -> 
 
 
 if __name__ == "__main__":
-    verts, faces = generate_three_layer_sphere_int(n=12, height=20, radius=10)
-    write_obj_file("crude_sphere.obj", verts, faces)
+    verts, faces = generate_three_layer_sphere_int(n=6, height=20, radius=10)
+    write_obj_file("crude_sphere_6.obj", verts, faces)
