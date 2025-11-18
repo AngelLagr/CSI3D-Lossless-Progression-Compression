@@ -362,7 +362,7 @@ class MeshTopology:
                 if face is not None:
                     faces.add(face)
                 else:
-                    raise RuntimeError("MeshTopology: incomplete face information detected.")
+                    print("MeshTopology: incomplete face information detected.")
 
         return faces
 

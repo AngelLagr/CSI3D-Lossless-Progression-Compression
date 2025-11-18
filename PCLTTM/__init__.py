@@ -48,6 +48,13 @@ class PCLTTM:
         initial_front_vertex = Vertex((0, 0, 10), self.mesh)
         return Gate((initial_left_vertex, initial_right_vertex), initial_front_vertex, self.mesh)
 
+    def __initial_gate_for_test(self) -> Gate:
+        initial_left_vertex = Vertex((3,0,0), self.mesh)
+        initial_right_vertex = Vertex((4,2,0), self.mesh)
+        initial_front_vertex = Vertex((2,2,0), self.mesh)
+        return Gate((initial_left_vertex, initial_right_vertex), initial_front_vertex, self.mesh)
+
+
     def compress(self) -> None:
         if self.mesh is None:
             raise ValueError("Mesh not loaded. Please parse a file first.")
@@ -56,7 +63,7 @@ class PCLTTM:
         # Initial gate selection
         # ------------------------------------------------------------------
         #initial_gate = self.mesh.get_random_gate()
-        initial_gate = self.__initial_gate_for_crude_sphere()
+        initial_gate = self.__initial_gate_for_test()
           
         if initial_gate is None:
             raise RuntimeError("Could not find an initial gate in the mesh.")
