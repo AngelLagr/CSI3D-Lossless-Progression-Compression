@@ -197,11 +197,8 @@ class MeshTopology:
         if (
             fromV not in self.active_state.vertex_connections
             or toV not in self.active_state.vertex_connections
-            # if edge already exists
-            or toV in self.active_state.vertex_connections[fromV]
         ):
-            raise ValueError("Cannot add edge between given vertices.")
-
+            return False    
         self.active_state.vertex_connections[fromV].add(toV)
         self.active_state.vertex_connections[toV].add(fromV)
         return True
