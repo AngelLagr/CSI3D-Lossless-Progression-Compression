@@ -282,8 +282,9 @@ class MeshTopology:
         connected_to_from = self.active_state.vertex_connections[fromV]
         connected_to_to = self.active_state.vertex_connections[toV]
         common_neighbours = connected_to_from.intersection(connected_to_to)
+        common_neighbours.discard(toV)
 
-        if len(common_neighbours) not in {1, 2}:
+        if len(common_neighbours) not in {0, 1, 2, 3}:
             print("Badly structured mesh, can't define the orientation")
             print("Wrong number of common neighbours for edge", from_to, ": ", common_neighbours)
         #    return False
@@ -304,13 +305,29 @@ class MeshTopology:
 
         #print("Set orientation:", from_to, "->", self.active_state.orientations[from_to])
         #print("Set opposite orientation:", opposite_side, "->", self.active_state.orientations[opposite_side])
-
-        self.active_state.orientations[(toV, third_vertex)] = (fromV, self.active_state.orientations.get((toV, third_vertex), (None, None))[1])
-        self.active_state.orientations[(third_vertex, fromV)] = (toV, self.active_state.orientations.get((third_vertex, fromV), (None, None))[1])
+        temp1 = self.active_state.orientations.get((toV, third_vertex), (None, None))
+        temp2 = self.active_state.orientations.get((third_vertex, fromV), (None, None))
+        temp3 = self.active_state.orientations.get((other_vertex, toV), (None, None))
+        temp4 = self.active_state.orientations.get((fromV, other_vertex), (None, None))
+        self.active_state.orientations[(toV, third_vertex)] = (fromV, temp1[1])
+        self.active_state.orientations[(third_vertex, fromV)] = (toV, temp2[1])
         if other_vertex is not None:
-            self.active_state.orientations[(other_vertex, toV)] = (fromV, self.active_state.orientations.get((other_vertex, toV), (None, None))[1])
-            self.active_state.orientations[(fromV, other_vertex)] = (toV, self.active_state.orientations.get((fromV, other_vertex), (None, None))[1])
+            self.active_state.orientations[(other_vertex, toV)] = (fromV, temp3[1])
+            self.active_state.orientations[(fromV, other_vertex)] = (toV, temp4[1])
         
+        #The other side
+
+        temp5 = self.active_state.orientations.get((third_vertex,toV), (None, None))
+        temp6 = self.active_state.orientations.get((fromV,third_vertex), (None, None))
+        temp7 = self.active_state.orientations.get((toV,other_vertex), (None, None))
+        temp8 = self.active_state.orientations.get((other_vertex,fromV), (None, None))
+        self.active_state.orientations[(third_vertex,toV)] = (temp5[0], fromV)
+        self.active_state.orientations[(fromV,third_vertex)] = (temp6[0],toV )
+        if other_vertex is not None:
+            self.active_state.orientations[(toV,other_vertex)] = (temp7[0],fromV)
+            self.active_state.orientations[(other_vertex,fromV)] = (temp8[0],toV)
+        
+
         return True
 
     def get_connected_vertices(self, vertex: Vertex) -> Set[Vertex]:
