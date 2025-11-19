@@ -108,8 +108,8 @@ class PCLTTM:
         # ------------------------------------------------------------------
         # Initial gate selection
         # ------------------------------------------------------------------
-        #initial_gate = self.mesh.get_random_gate()
-        initial_gate = self.__initial_gate_for_test()
+        initial_gate = self.mesh.get_random_gate()
+        #initial_gate = self.__initial_gate_for_crude_sphere_4()
           
         if initial_gate is None:
             raise RuntimeError("Could not find an initial gate in the mesh.")
