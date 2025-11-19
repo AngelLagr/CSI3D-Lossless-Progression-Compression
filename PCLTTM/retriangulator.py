@@ -84,108 +84,122 @@ class Retriangulator:
         # On regarde si il y a un sommet taggÃ© '-', si c'est le cas, on relie les deux autres extrÃ©mitÃ©s
         # Sinon on relie le premier sommet avec le troisieme sommet du polygone
 
-        mesh.remove_vertex(front_vertex, force=True)
         if valence < 3 or valence > 6:
             return False
 
         pov = patch_oriented_vertex  # alias court
         print(pov)
         try :
+            edges_to_add = []
+            orientations_to_set = []
             match (left_tag, right_tag):
                 case (RetriangulationTag.Plus, RetriangulationTag.Minus):
                     match valence:
                         case 3:
-                            mesh.set_orientation((pov[2], pov[0]), pov[1])
+                            orientations_to_set.append(((pov[2], pov[0]), pov[1]))
                         case 4:
                             # prioritÃ© au '-' de droite â†’ diagonale (1,3)
-                            mesh.add_edge(pov[0], pov[2])
-                            mesh.set_orientation((pov[0], pov[2]), pov[3])
+                            edges_to_add.append((pov[0], pov[2]))
+                            orientations_to_set.append(((pov[0], pov[2]), pov[3]))
                         case 5:
                             # prioritÃ© au '-' de droite â†’ Ã©ventail depuis 4
-                            mesh.add_edge(pov[0], pov[2])
-                            mesh.add_edge(pov[2], pov[4])
-                            mesh.set_orientation((pov[0], pov[2]), pov[4])
-                            mesh.set_orientation((pov[2], pov[4]), pov[0])
+                            edges_to_add.append((pov[0], pov[2]))
+                            edges_to_add.append((pov[2], pov[4]))
+                            orientations_to_set.append(((pov[0], pov[2]), pov[4]))
+                            orientations_to_set.append(((pov[2], pov[4]), pov[0]))
                         case 6:
                             # prioritÃ© au '-' de droite â†’ Ã©ventail depuis 5
-                            mesh.add_edge(pov[0], pov[2])
-                            mesh.add_edge(pov[0], pov[4])
-                            mesh.add_edge(pov[4], pov[2])
-                            mesh.set_orientation((pov[2], pov[0]), pov[1])
-                            mesh.set_orientation((pov[0], pov[4]), pov[5])
-                            mesh.set_orientation((pov[4], pov[2]), pov[3])
+                            edges_to_add.append((pov[0], pov[2]))
+                            edges_to_add.append((pov[0], pov[4]))
+                            edges_to_add.append((pov[4], pov[2]))
+                            orientations_to_set.append(((pov[2], pov[0]), pov[1]))
+                            orientations_to_set.append(((pov[0], pov[4]), pov[5]))
+                            orientations_to_set.append(((pov[4], pov[2]), pov[3]))
                         case _:
                             pass
                 case (RetriangulationTag.Minus, RetriangulationTag.Plus):
                     match valence:
                         case 3:
-                            mesh.set_orientation((pov[2], pov[0]), pov[1])
+                            orientations_to_set.append(((pov[2], pov[0]), pov[1]))
                         case 4:
                             # prioritÃ© au '-' de gauche â†’ diagonale (0,2)
                             
-                            mesh.add_edge(pov[1], pov[3])
-                            mesh.set_orientation((pov[1], pov[3]), pov[0])
+                            edges_to_add.append((pov[1], pov[3]))
+                            orientations_to_set.append(((pov[1], pov[3]), pov[0]))
                         case 5:
                             # prioritÃ© au '-' de gauche â†’ Ã©ventail depuis 0
-                            mesh.add_edge(pov[2], pov[4])
-                            mesh.add_edge(pov[1], pov[4])
-                            mesh.set_orientation((pov[4], pov[1]), pov[2])
-                            mesh.set_orientation((pov[4], pov[2]), pov[3])
+                            edges_to_add.append((pov[2], pov[4]))
+                            edges_to_add.append((pov[1], pov[4]))
+                            orientations_to_set.append(((pov[4], pov[1]), pov[2]))
+                            orientations_to_set.append(((pov[4], pov[2]), pov[3]))
                         case 6:
                             # prioritÃ© au '-' de gauche â†’ Ã©ventail depuis 0
-                            mesh.add_edge(pov[1], pov[3])
-                            mesh.add_edge(pov[3], pov[5])
-                            mesh.add_edge(pov[5], pov[1])
-                            mesh.set_orientation((pov[5], pov[1]), pov[3])
-                            mesh.set_orientation((pov[1], pov[3]), pov[5])
-                            mesh.set_orientation((pov[3], pov[5]), pov[1])
+                            edges_to_add.append((pov[1], pov[3]))
+                            edges_to_add.append((pov[3], pov[5]))
+                            edges_to_add.append((pov[5], pov[1]))
+                            orientations_to_set.append(((pov[5], pov[1]), pov[3]))
+                            orientations_to_set.append(((pov[1], pov[3]), pov[5]))
+                            orientations_to_set.append(((pov[3], pov[5]), pov[1]))
                         case _:
                             pass
                 case (RetriangulationTag.Plus, RetriangulationTag.Plus):
                     match valence:
                         case 3:
-                            mesh.set_orientation((pov[2], pov[0]), pov[1])
+                            orientations_to_set.append(((pov[2], pov[0]), pov[1]))
                         case 4:
                             # gate ++ OU gate -- : prioritÃ© cÃ´tÃ© droit â†’ diagonale (1,3)
-                            mesh.add_edge(pov[1], pov[3])
-                            mesh.set_orientation((pov[1], pov[3]), pov[0])
+                            edges_to_add.append((pov[1], pov[3]))
+                            orientations_to_set.append(((pov[1], pov[3]), pov[0]))
                         case 5:
                             # ++ ou -- : prioritÃ© cÃ´tÃ© droit â†’ Ã©ventail depuis 4
-                            mesh.add_edge(pov[1], pov[3])
-                            mesh.add_edge(pov[0], pov[3])
-                            mesh.set_orientation((pov[1], pov[3]), pov[0])
-                            mesh.set_orientation((pov[0], pov[3]), pov[4])
+                            edges_to_add.append((pov[1], pov[3]))
+                            edges_to_add.append((pov[0], pov[3]))
+                            orientations_to_set.append(((pov[1], pov[3]), pov[0]))
+                            orientations_to_set.append(((pov[0], pov[3]), pov[4]))
                         case 6:
                             # ++ ou -- : prioritÃ© cÃ´tÃ© droit â†’ Ã©ventail depuis 5
-                            mesh.add_edge(pov[1], pov[3])
-                            mesh.add_edge(pov[3], pov[5])
-                            mesh.add_edge(pov[1], pov[5])
-                            mesh.set_orientation((pov[1], pov[5]), pov[0])
-                            mesh.set_orientation((pov[3], pov[1]), pov[2])
-                            mesh.set_orientation((pov[5], pov[3]), pov[4])
+                            edges_to_add.append((pov[1], pov[3]))
+                            edges_to_add.append((pov[3], pov[5]))
+                            edges_to_add.append((pov[1], pov[5]))
+                            orientations_to_set.append(((pov[1], pov[5]), pov[0]))
+                            orientations_to_set.append(((pov[3], pov[1]), pov[2]))
+                            orientations_to_set.append(((pov[5], pov[3]), pov[4]))
                         case _:
                             pass
                 case _:  # (RetriangulationTag.Minus, RetriangulationTag.Minus)
                     match valence:
                         case 3:
-                            mesh.set_orientation((pov[2], pov[0]), pov[1])
+                            orientations_to_set.append(((pov[2], pov[0]), pov[1]))
                         case 4:
-                            mesh.add_edge(pov[0], pov[2])
-                            mesh.set_orientation((pov[0], pov[2]), pov[3])
+                            edges_to_add.append((pov[0], pov[2]))
+                            orientations_to_set.append(((pov[0], pov[2]), pov[3]))
                         case 5:
-                            mesh.add_edge(pov[0], pov[2])
-                            mesh.add_edge(pov[4], pov[2])
-                            mesh.set_orientation((pov[2], pov[0]), pov[1])
-                            mesh.set_orientation((pov[0], pov[2]), pov[4])
+                            edges_to_add.append((pov[0], pov[2]))
+                            edges_to_add.append((pov[4], pov[2]))
+                            orientations_to_set.append(((pov[2], pov[0]), pov[1]))
+                            orientations_to_set.append(((pov[0], pov[2]), pov[4]))
                         case 6:
-                            mesh.add_edge(pov[0], pov[2])
-                            mesh.add_edge(pov[4], pov[2])
-                            mesh.add_edge(pov[0], pov[4])
-                            mesh.set_orientation((pov[2], pov[0]), pov[1])
-                            mesh.set_orientation((pov[0], pov[4]), pov[5])
-                            mesh.set_orientation((pov[4], pov[2]), pov[3])
+                            edges_to_add.append((pov[0], pov[2]))
+                            edges_to_add.append((pov[4], pov[2]))
+                            edges_to_add.append((pov[0], pov[4]))
+                            orientations_to_set.append(((pov[2], pov[0]), pov[1]))
+                            orientations_to_set.append(((pov[0], pov[4]), pov[5]))
+                            orientations_to_set.append(((pov[4], pov[2]), pov[3]))
                         case _:
                             pass
+
+            for edge in edges_to_add:
+                if edge[1] in self.mesh.active_state.vertex_connexions.get(edge[0], set()):
+                    raise Exception(f"Edge {edge} already exists in the mesh.")
+            
+            for edge in edges_to_add:
+                mesh.add_edge(edge[0], edge[1])
+
+            for orientation in orientations_to_set:
+                mesh.set_orientation(orientation[0], orientation[1])
+                
+            mesh.remove_vertex(front_vertex, force=True)
+            
             return True
         except Exception as e:
             print(f"Error during retriangulation: {e}")
