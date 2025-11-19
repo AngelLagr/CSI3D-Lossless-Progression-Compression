@@ -189,7 +189,7 @@ class MeshTopology:
     # Edge management
     # ----------------------------------------------------------------------
 
-    def add_edge(self, fromV: Vertex, toV: Vertex):
+    def add_edge(self, fromV: Vertex, toV: Vertex) -> bool:
         """
         Add an undirected edge between fromV and toV.
         Orientation must be set later explicitly via set_orientation().
@@ -197,11 +197,14 @@ class MeshTopology:
         if (
             fromV not in self.active_state.vertex_connections
             or toV not in self.active_state.vertex_connections
+            # if edge already exists
+            or toV in self.active_state.vertex_connections[fromV]
         ):
-            return
+            raise ValueError("Cannot add edge between given vertices.")
 
         self.active_state.vertex_connections[fromV].add(toV)
         self.active_state.vertex_connections[toV].add(fromV)
+        return True
 
     def can_remove_edge(self, fromV: Vertex, toV: Vertex) -> bool:
         """

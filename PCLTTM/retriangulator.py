@@ -24,7 +24,7 @@ class Retriangulator:
         mesh,
         valence: int, current_gate: Gate,
         patch_oriented_vertex: List[Vertex],
-    ) -> Tuple[List[Face], Dict[int, str]]:
+    ) -> bool:
         """
         Args:
             valence: nombre de sommets du patch (3..6)
@@ -57,7 +57,7 @@ class Retriangulator:
             starting_tag = RetriangulationTag.Minus
         self.tag_propagation(mesh, [v for v in patch_oriented_vertex if v not in current_gate.edge], starting_tag)
 
-        self.triangulate_table(
+        return self.triangulate_table(
             mesh, front_vertex, patch_oriented_vertex, left_tag, right_tag,  valence)
 
     def tag_propagation(self, mesh, vertex_to_tag: List[Vertex], starting_tag: RetriangulationTag):
@@ -75,7 +75,7 @@ class Retriangulator:
         patch_oriented_vertex: List[Vertex],
         left_tag, right_tag,
         valence: int,
-    ) -> List[Face]:
+    ) -> bool:
         # On construit la table, donc on parcourt tous les sommets du patch orientÃ©
         # d'abord on regarde si le nombre de sommet taguÃ©s moins ou taguÃ©s plus est diffÃ©rents
         # si c'est le cas on minimise la valance du cotÃ© droit de la gate
@@ -85,102 +85,107 @@ class Retriangulator:
 
         mesh.remove_vertex(front_vertex, force=True)
         if valence < 3 or valence > 6:
-            return []
+            return False
 
         pov = patch_oriented_vertex  # alias court
         print(pov)
         # python 3.10+ pattern matching
-        match (left_tag, right_tag):
-            case (RetriangulationTag.Plus, RetriangulationTag.Minus):
-                match valence:
-                    case 3:
-                        mesh.set_orientation((pov[2], pov[0]), pov[1])
-                    case 4:
-                        # prioritÃ© au '-' de droite â†’ diagonale (1,3)
-                        mesh.add_edge(pov[1], pov[3])
-                        mesh.set_orientation((pov[1], pov[3]), pov[0])
-                    case 5:
-                        # prioritÃ© au '-' de droite â†’ Ã©ventail depuis 4
-                        mesh.add_edge(pov[4], pov[1])
-                        mesh.add_edge(pov[1], pov[3])
-                        mesh.set_orientation((pov[3], pov[1]), pov[2])
-                        mesh.set_orientation((pov[4], pov[1]), pov[3])
-                    case 6:
-                        # prioritÃ© au '-' de droite â†’ Ã©ventail depuis 5
-                        mesh.add_edge(pov[5], pov[1])
-                        mesh.add_edge(pov[3], pov[1])
-                        mesh.add_edge(pov[5], pov[3])
-                        mesh.set_orientation((pov[1], pov[5]), pov[0])
-                        mesh.set_orientation((pov[5], pov[3]), pov[4])
-                        mesh.set_orientation((pov[3], pov[1]), pov[2])
-                    case _:
-                        pass
-            case (RetriangulationTag.Minus, RetriangulationTag.Plus):
-                match valence:
-                    case 3:
-                        mesh.set_orientation((pov[2], pov[0]), pov[1])
-                    case 4:
-                        # prioritÃ© au '-' de gauche â†’ diagonale (0,2)
-                        mesh.add_edge(pov[0], pov[2])
-                        mesh.set_orientation((pov[0], pov[2]), pov[3])
-                    case 5:
-                        # prioritÃ© au '-' de gauche â†’ Ã©ventail depuis 0
-                        mesh.add_edge(pov[1], pov[3])
-                        mesh.add_edge(pov[0], pov[3])
-                        mesh.set_orientation((pov[0], pov[3]), pov[4])
-                        mesh.set_orientation((pov[3], pov[1]), pov[2])
-                    case 6:
-                        # prioritÃ© au '-' de gauche â†’ Ã©ventail depuis 0
-                        mesh.add_edge(pov[0], pov[2])
-                        mesh.add_edge(pov[2], pov[4])
-                        mesh.add_edge(pov[0], pov[4])
-                        mesh.set_orientation((pov[0], pov[4]), pov[2])
-                        mesh.set_orientation((pov[2], pov[0]), pov[4])
-                        mesh.set_orientation((pov[4], pov[2]), pov[0])
-                    case _:
-                        pass
-            case (RetriangulationTag.Plus, RetriangulationTag.Plus):
-                match valence:
-                    case 3:
-                        mesh.set_orientation((pov[2], pov[0]), pov[1])
-                    case 4:
-                        # gate ++ OU gate -- : prioritÃ© cÃ´tÃ© droit â†’ diagonale (1,3)
-                        mesh.add_edge(pov[0], pov[2])
-                        mesh.set_orientation((pov[0], pov[2]), pov[3])
-                    case 5:
-                        # ++ ou -- : prioritÃ© cÃ´tÃ© droit â†’ Ã©ventail depuis 4
-                        mesh.add_edge(pov[0], pov[2])
-                        mesh.add_edge(pov[4], pov[2])
-                        mesh.set_orientation((pov[2], pov[0]), pov[1])
-                        mesh.set_orientation((pov[4], pov[2]), pov[3])
-                    case 6:
-                        # ++ ou -- : prioritÃ© cÃ´tÃ© droit â†’ Ã©ventail depuis 5
-                        mesh.add_edge(pov[0], pov[2])
-                        mesh.add_edge(pov[2], pov[4])
-                        mesh.add_edge(pov[0], pov[4])
-                        mesh.set_orientation((pov[0], pov[4]), pov[5])
-                        mesh.set_orientation((pov[2], pov[0]), pov[1])
-                        mesh.set_orientation((pov[4], pov[2]), pov[3])
-                    case _:
-                        pass
-            case _:  # (RetriangulationTag.Minus, RetriangulationTag.Minus)
-                match valence:
-                    case 3:
-                        mesh.set_orientation((pov[2], pov[0]), pov[1])
-                    case 4:
-                        mesh.add_edge(pov[1], pov[3])
-                        mesh.set_orientation((pov[1], pov[3]), pov[0])
-                    case 5:
-                        mesh.add_edge(pov[1], pov[4])
-                        mesh.add_edge(pov[1], pov[3])
-                        mesh.set_orientation((pov[2], pov[4]), pov[0])
-                        mesh.set_orientation((pov[3], pov[1]), pov[2])
-                    case 6:
-                        mesh.add_edge(pov[5], pov[1])
-                        mesh.add_edge(pov[3], pov[1])
-                        mesh.add_edge(pov[5], pov[3])
-                        mesh.set_orientation((pov[1], pov[5]), pov[0])
-                        mesh.set_orientation((pov[5], pov[3]), pov[4])
-                        mesh.set_orientation((pov[3], pov[1]), pov[2])
-                    case _:
-                        pass
+        try :
+            match (left_tag, right_tag):
+                case (RetriangulationTag.Plus, RetriangulationTag.Minus):
+                    match valence:
+                        case 3:
+                            mesh.set_orientation((pov[2], pov[0]), pov[1])
+                        case 4:
+                            # prioritÃ© au '-' de droite â†’ diagonale (1,3)
+                            mesh.add_edge(pov[1], pov[3])
+                            mesh.set_orientation((pov[1], pov[3]), pov[0])
+                        case 5:
+                            # prioritÃ© au '-' de droite â†’ Ã©ventail depuis 4
+                            mesh.add_edge(pov[4], pov[1])
+                            mesh.add_edge(pov[1], pov[3])
+                            mesh.set_orientation((pov[3], pov[1]), pov[2])
+                            mesh.set_orientation((pov[4], pov[1]), pov[3])
+                        case 6:
+                            # prioritÃ© au '-' de droite â†’ Ã©ventail depuis 5
+                            mesh.add_edge(pov[5], pov[1])
+                            mesh.add_edge(pov[3], pov[1])
+                            mesh.add_edge(pov[5], pov[3])
+                            mesh.set_orientation((pov[1], pov[5]), pov[0])
+                            mesh.set_orientation((pov[5], pov[3]), pov[4])
+                            mesh.set_orientation((pov[3], pov[1]), pov[2])
+                        case _:
+                            pass
+                case (RetriangulationTag.Minus, RetriangulationTag.Plus):
+                    match valence:
+                        case 3:
+                            mesh.set_orientation((pov[2], pov[0]), pov[1])
+                        case 4:
+                            # prioritÃ© au '-' de gauche â†’ diagonale (0,2)
+                            mesh.add_edge(pov[0], pov[2])
+                            mesh.set_orientation((pov[0], pov[2]), pov[3])
+                        case 5:
+                            # prioritÃ© au '-' de gauche â†’ Ã©ventail depuis 0
+                            mesh.add_edge(pov[1], pov[3])
+                            mesh.add_edge(pov[0], pov[3])
+                            mesh.set_orientation((pov[0], pov[3]), pov[4])
+                            mesh.set_orientation((pov[3], pov[1]), pov[2])
+                        case 6:
+                            # prioritÃ© au '-' de gauche â†’ Ã©ventail depuis 0
+                            mesh.add_edge(pov[0], pov[2])
+                            mesh.add_edge(pov[2], pov[4])
+                            mesh.add_edge(pov[0], pov[4])
+                            mesh.set_orientation((pov[0], pov[4]), pov[2])
+                            mesh.set_orientation((pov[2], pov[0]), pov[4])
+                            mesh.set_orientation((pov[4], pov[2]), pov[0])
+                        case _:
+                            pass
+                case (RetriangulationTag.Plus, RetriangulationTag.Plus):
+                    match valence:
+                        case 3:
+                            mesh.set_orientation((pov[2], pov[0]), pov[1])
+                        case 4:
+                            # gate ++ OU gate -- : prioritÃ© cÃ´tÃ© droit â†’ diagonale (1,3)
+                            mesh.add_edge(pov[0], pov[2])
+                            mesh.set_orientation((pov[0], pov[2]), pov[3])
+                        case 5:
+                            # ++ ou -- : prioritÃ© cÃ´tÃ© droit â†’ Ã©ventail depuis 4
+                            mesh.add_edge(pov[0], pov[2])
+                            mesh.add_edge(pov[4], pov[2])
+                            mesh.set_orientation((pov[2], pov[0]), pov[1])
+                            mesh.set_orientation((pov[4], pov[2]), pov[3])
+                        case 6:
+                            # ++ ou -- : prioritÃ© cÃ´tÃ© droit â†’ Ã©ventail depuis 5
+                            mesh.add_edge(pov[0], pov[2])
+                            mesh.add_edge(pov[2], pov[4])
+                            mesh.add_edge(pov[0], pov[4])
+                            mesh.set_orientation((pov[0], pov[4]), pov[5])
+                            mesh.set_orientation((pov[2], pov[0]), pov[1])
+                            mesh.set_orientation((pov[4], pov[2]), pov[3])
+                        case _:
+                            pass
+                case _:  # (RetriangulationTag.Minus, RetriangulationTag.Minus)
+                    match valence:
+                        case 3:
+                            mesh.set_orientation((pov[2], pov[0]), pov[1])
+                        case 4:
+                            mesh.add_edge(pov[1], pov[3])
+                            mesh.set_orientation((pov[1], pov[3]), pov[0])
+                        case 5:
+                            mesh.add_edge(pov[1], pov[4])
+                            mesh.add_edge(pov[1], pov[3])
+                            mesh.set_orientation((pov[2], pov[4]), pov[0])
+                            mesh.set_orientation((pov[3], pov[1]), pov[2])
+                        case 6:
+                            mesh.add_edge(pov[5], pov[1])
+                            mesh.add_edge(pov[3], pov[1])
+                            mesh.add_edge(pov[5], pov[3])
+                            mesh.set_orientation((pov[1], pov[5]), pov[0])
+                            mesh.set_orientation((pov[5], pov[3]), pov[4])
+                            mesh.set_orientation((pov[3], pov[1]), pov[2])
+                        case _:
+                            pass
+            return True
+        except Exception as e:
+            print(f"Error during retriangulation: {e}")
+            return False

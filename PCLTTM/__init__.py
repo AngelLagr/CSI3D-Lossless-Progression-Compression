@@ -255,11 +255,26 @@ class PCLTTM:
     # 1. Vertex whose removal leads to violation of the manifold property of the mesh, 
     #       i.e. when the corresponding remeshing process would create already existing edges.
     # 2. Vertex whose removal leads to a normal flipping locally.
-    def _can_remove_vertex(self, v: Vertex) -> bool:
-        return True
+    def _can_remove_vertex(self, v: Vertex, valence, current_gate, patch_vertices) -> bool:
         if self.mesh is None:
             return False
-        return self.mesh.can_remove_vertex(v) 
+        import copy
+        mesh_aux = copy.deepcopy(self.mesh)
+        
+        ok = True
+        # Check if we didn't create already existing edges
+        ok = ok and self.retriangulator.retriangulate(
+            mesh_aux, valence, current_gate, patch_vertices
+        )
+
+        # Check if we didn't create flipped normals
+        #ok = ?
+
+        # destroy var mesh_aux
+        del mesh_aux
+
+        return ok and self.mesh.can_remove_vertex(v) 
+
 
 
     def _decimation_phase(self, initial_gate) -> None:
@@ -285,13 +300,14 @@ class PCLTTM:
             )
            
             out_gates = []
-            can_remove = self._can_remove_vertex(center_vertex)
+            patch = self.mesh.get_patch(center_vertex)
+            can_remove = self._can_remove_vertex(center_vertex, valence, current_gate, patch)
             # ------------------------------------------------------------------
             # PROPER PATCH / DECIMATION (for free vertices)
             # ------------------------------------------------------------------
             if valence in [3, 4, 5, 6] and vertex_state == StateFlag.Free and can_remove:
                 # Original logic: get patch around the center vertex
-                patch = self.mesh.get_patch(center_vertex)
+                
                 if patch is None or patch.valence() == 0:
                     # Degenerate case: treat as null patch, but do NOT propagate
                     raise RuntimeError("WARNING: None or empty PATCH for vertex:", center_vertex)
@@ -355,14 +371,14 @@ class PCLTTM:
             )
            
             out_gates = []
-            can_remove = self._can_remove_vertex(center_vertex)
+            patch = self.mesh.get_patch(center_vertex)
+            can_remove = self._can_remove_vertex(center_vertex, valence, current_gate, patch)
 
             # ------------------------------------------------------------------
             # PROPER PATCH / DECIMATION (for free vertices)
             # ------------------------------------------------------------------
             if valence == 3 and vertex_state == StateFlag.Free and can_remove:
                 # Original logic: get patch around the center vertex
-                patch = self.mesh.get_patch(center_vertex)
                 if patch is None or patch.valence() == 0:
                     # Degenerate case: treat as null patch, but do NOT propagate
                     raise RuntimeError("WARNING: None or empty PATCH for vertex:", center_vertex)

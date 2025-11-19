@@ -177,6 +177,69 @@ def test_parser(obj_file: str) -> bool:
     is_successful = is_successful and test_sampled_orientation(obj_file, 10000000) # large number to test all faces
     return is_successful
 
+def test_retriangulation():
+    from PCLTTM.data_structures.constants import StateFlag, RetriangulationTag
+    model = PCLTTM()
+    model.parse_file('./example/test.obj')
+
+
+    initial_gate = model.__initial_gate_for_test()
+          
+    if initial_gate is None:
+        raise RuntimeError("Could not find an initial gate in the mesh.")
+
+    # Tag the two vertices of the initial gate
+    v_plus, v_minus = initial_gate.edge
+    model.retriangulator.retriangulation_tags[v_plus] = RetriangulationTag.Plus
+    model.retriangulator.retriangulation_tags[v_minus] = RetriangulationTag.Minus
+
+    left_vertex, right_vertex = initial_gate.edge
+    center_vertex = initial_gate.front_vertex
+
+    vertex_state = model.state_flags.get(center_vertex, StateFlag.Free)
+
+    # valence is taken from the mesh topology
+    valence = center_vertex.valence()
+
+    print(
+        valence, "valence ", center_vertex,
+        "state:", vertex_state, left_vertex, right_vertex
+    )
+
+    can_remove = model.mesh.can_remove_vertex(center_vertex)
+    assert can_remove is True, "Vertex should be removable"
+
+    if can_remove:
+        # Original logic: get patch around the center vertex
+        patch = model.mesh.get_patch(center_vertex)
+
+        if patch is None or patch.valence() == 0:
+            # Degenerate case: treat as null patch, but do NOT propagate
+            print("NULL PATCH (empty) for vertex:", center_vertex)
+            assert False, "Patch should not be null or empty in this test."
+
+        # Get output gates and ring vertices
+        out_gates = patch.output_gates(initial_gate.edge)
+        print(len(out_gates), "gates in the patch")
+
+        patch_vertices = patch.surrounding_vertices(initial_gate.edge)
+
+        # Perform local retriangulation
+        model.retriangulator.retriangulate(
+            model.mesh, valence, initial_gate, patch_vertices
+        )
+
+        # it needs to have 19 edges
+        expected_edge_count = 19
+        actual_edge_count = len(model.mesh.active_state.vertex_connections)
+        assert actual_edge_count == expected_edge_count, f"Expected {expected_edge_count} edges, got {actual_edge_count}"
+
+
+
+def test_nullpatch():
+    pass
+
+
 def main():
     print("Vertex ordering: ", test_vertex_ordering())
     print("Face hashing: ", test_face_hashing())
