@@ -73,8 +73,8 @@ class PCLTTM:
         # ------------------------------------------------------------------
         # Initial gate selection
         # ------------------------------------------------------------------
-        #initial_gate = self.mesh.get_random_gate()
-        initial_gate = self.__initial_gate_for_test()
+        initial_gate = self.mesh.get_random_gate()
+        #initial_gate = self.__initial_gate_for_test()
           
         if initial_gate is None:
             raise RuntimeError("Could not find an initial gate in the mesh.")
@@ -98,7 +98,29 @@ class PCLTTM:
             self._cleaning_phase(initial_gate)
 
         self.mesh.export_to_obj(f"decimation_step_final.obj")
+    # Conditions where a vertex cannot be removed:
+    # 1. Vertex whose removal leads to violation of the manifold property of the mesh, 
+    #       i.e. when the corresponding remeshing process would create already existing edges.
+    # 2. Vertex whose removal leads to a normal flipping locally.
+    def _can_remove_vertex(self, v: Vertex, valence, current_gate, patch_vertices) -> bool:
+        if self.mesh is None:
+            return False
+        import copy
+        mesh_aux = copy.deepcopy(self.mesh)
         
+        ok = True
+        # Check if we didn't create already existing edges
+        ok = ok and self.retriangulator.retriangulate(
+            mesh_aux, valence, current_gate, patch_vertices
+        )
+
+        # Check if we didn't create flipped normals
+        #ok = ?
+
+        # destroy var mesh_aux
+        del mesh_aux
+
+        return ok and self.mesh.can_remove_vertex(v)   
 
 
     def compress(self) -> None:
@@ -155,14 +177,17 @@ class PCLTTM:
                 "state:", vertex_state, left_vertex, right_vertex
             )
 
-            can_remove = self.mesh.can_remove_vertex(center_vertex)
-
+            #can_remove = self.mesh.can_remove_vertex(center_vertex)
+            patch = self.mesh.get_patch(center_vertex)
+            if (vertex_state == StateFlag.Free and valence in [3, 4, 5, 6]  ):
+                can_remove = self._can_remove_vertex(center_vertex, valence, current_gate, patch.surrounding_vertices(current_gate.edge))
+            else:
+                can_remove = False
             # ------------------------------------------------------------------
             # PROPER PATCH / DECIMATION (for free vertices)
             # ------------------------------------------------------------------
             if (vertex_state == StateFlag.Free and valence in [3, 4, 5, 6] and can_remove):
                 # Original logic: get patch around the center vertex
-                patch = self.mesh.get_patch(center_vertex)
                 print("Processing patch for vertex:", center_vertex, "valence:", valence, "with faces:")
                 for f in patch.faces:
                     print("\t- ", f)
@@ -254,29 +279,7 @@ class PCLTTM:
         
         # Debug: export the result
 
-    # Conditions where a vertex cannot be removed:
-    # 1. Vertex whose removal leads to violation of the manifold property of the mesh, 
-    #       i.e. when the corresponding remeshing process would create already existing edges.
-    # 2. Vertex whose removal leads to a normal flipping locally.
-    def _can_remove_vertex(self, v: Vertex, valence, current_gate, patch_vertices) -> bool:
-        if self.mesh is None:
-            return False
-        import copy
-        mesh_aux = copy.deepcopy(self.mesh)
-        
-        ok = True
-        # Check if we didn't create already existing edges
-        ok = ok and self.retriangulator.retriangulate(
-            mesh_aux, valence, current_gate, patch_vertices
-        )
-
-        # Check if we didn't create flipped normals
-        #ok = ?
-
-        # destroy var mesh_aux
-        del mesh_aux
-
-        return ok and self.mesh.can_remove_vertex(v) 
+    
 
 
 
@@ -357,7 +360,7 @@ class PCLTTM:
             raise RuntimeError("Could not find an initial gate in the mesh.")
 
         # Tag the two vertices of the initial gate
-        v_minus, v_plus = initial_gate.edge
+        #v_minus, v_plus = initial_gate.edge
         print("#############################CLEANING###################")
         # set all tags to Defaults
         #for v in self.retriangulator.retriangulation_tags.keys():
@@ -405,15 +408,17 @@ class PCLTTM:
                 valence, "valence ", center_vertex,
                 "state:", vertex_state, left_vertex, right_vertex
             )
+            patch = self.mesh.get_patch(center_vertex)
 
-            can_remove = self.mesh.can_remove_vertex(center_vertex)
-
+            if (vertex_state == StateFlag.Free and valence ==3  ):
+                can_remove = self._can_remove_vertex(center_vertex, valence, current_gate, patch.surrounding_vertices(current_gate.edge))
+            else:
+                can_remove = False
             # ------------------------------------------------------------------
             # PROPER PATCH / DECIMATION (for free vertices)
             # ------------------------------------------------------------------
             if (vertex_state == StateFlag.Free and valence ==3 and can_remove):
                 # Original logic: get patch around the center vertex
-                patch = self.mesh.get_patch(center_vertex)
                 print("Processing patch for vertex:", center_vertex, "valence:", valence, "with faces:")
                 for f in patch.faces:
                     print("\t- ", f)
