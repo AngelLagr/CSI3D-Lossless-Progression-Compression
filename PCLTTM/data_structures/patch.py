@@ -73,10 +73,13 @@ class Patch:
 
         if not self.faces:
             return []
+        
+        from PCLTTM.data_structures.face import Face
+
 
         remaining_faces = set(self.faces)
         remaining_faces.remove(Face((starting_edge[0], starting_edge[1], self.center_vertex)))
-        sequence: List[Vertex] = [starting_edge[0]]
+        sequence: List[Vertex] = [starting_edge[0], starting_edge[1]]
 
         current_vertex = starting_edge[1]
 
@@ -110,6 +113,7 @@ class Patch:
 
             current_vertex = next_vertex
 
+        sequence.pop()  # Remove last vertex which is duplicate of first
         return sequence
 
     def surrounding_edges(
@@ -130,10 +134,10 @@ class Patch:
         edge_sequence: List[Tuple[Vertex, Vertex]] = []
         current_vertex = starting_edge[0]
 
-        for next_vertex in verts:
+        for next_vertex in verts[1:]:
             edge_sequence.append((current_vertex, next_vertex))
             current_vertex = next_vertex
-
+        edge_sequence.append((current_vertex, verts[0]))  # Close the loop
         return edge_sequence
 
     # ------------------------------------------------------------------
@@ -167,21 +171,17 @@ class Patch:
 
         for edge in self.surrounding_edges(starting_edge):
             oriented_faces = self.mesh.get_oriented_faces(edge)
-            # oriented_faces is (Face | None, Face | None)
-            for face in oriented_faces:
-                if face is None:
-                    continue
-                if self.center_vertex in face.vertices:
-                    # This face is still in the patch, not "outside"
-                    continue
+            outward_vertex = oriented_faces[1].next_vertex(edge) if oriented_faces[1] is not None else None
+            if self.center_vertex == outward_vertex or outward_vertex is None:
+                print("Warning: oriented face's outward vertex is the center vertex itself.")
+                print("Edge:", edge, "Oriented faces:", oriented_faces)
+                outward_vertex = oriented_faces[0].next_vertex(edge) if oriented_faces[0] is not None else None
 
-                next_vertex = face.next_vertex(edge)
-                if next_vertex is None:
-                    continue
-
-                output_gates.append(Gate(edge, next_vertex, self.mesh))
-                # We only want one outside face per edge
-                break
+            if outward_vertex is None:
+                print("Warning: could not find oriented face for edge:", edge, "Oriented faces:", oriented_faces)
+                continue
+            else:
+                output_gates.append(Gate((edge[1], edge[0]), outward_vertex, self.mesh))
 
         return output_gates[1:]  # Exclude the input gate
 

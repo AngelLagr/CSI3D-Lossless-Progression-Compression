@@ -279,8 +279,9 @@ class MeshTopology:
         connected_to_from = self.active_state.vertex_connections[fromV]
         connected_to_to = self.active_state.vertex_connections[toV]
         common_neighbours = connected_to_from.intersection(connected_to_to)
+        common_neighbours.discard(toV)
 
-        if len(common_neighbours) not in {1, 2}:
+        if len(common_neighbours) not in {0, 1, 2, 3}:
             print("Badly structured mesh, can't define the orientation")
             print("Wrong number of common neighbours for edge", from_to, ": ", common_neighbours)
         #    return False

@@ -68,6 +68,7 @@ class Retriangulator:
         for vertex in vertex_to_tag:
             index = (index + 1) % len(tags)
             if self.retriangulation_tags[vertex] == RetriangulationTag.Default:
+                print("Vertex", vertex, "tagged as", tags[index])
                 self.retriangulation_tags[vertex] = tags[index]
         
     def triangulate_table(
@@ -97,14 +98,14 @@ class Retriangulator:
                         mesh.set_orientation((pov[2], pov[0]), pov[1])
                     case 4:
                         # prioritÃ© au '-' de droite â†’ diagonale (1,3)
-                        mesh.add_edge(pov[1], pov[3])
-                        mesh.set_orientation((pov[1], pov[3]), pov[0])
+                        mesh.add_edge(pov[0], pov[2])
+                        mesh.set_orientation((pov[0], pov[2]), pov[3])
                     case 5:
                         # prioritÃ© au '-' de droite â†’ Ã©ventail depuis 4
-                        mesh.add_edge(pov[4], pov[1])
-                        mesh.add_edge(pov[1], pov[3])
-                        mesh.set_orientation((pov[3], pov[1]), pov[2])
-                        mesh.set_orientation((pov[4], pov[1]), pov[3])
+                        mesh.add_edge(pov[0], pov[2])
+                        mesh.add_edge(pov[2], pov[4])
+                        mesh.set_orientation((pov[0], pov[2]), pov[4])
+                        mesh.set_orientation((pov[2], pov[4]), pov[0])
                     case 6:
                         # prioritÃ© au '-' de droite â†’ Ã©ventail depuis 5
                         mesh.add_edge(pov[5], pov[1])
@@ -121,22 +122,23 @@ class Retriangulator:
                         mesh.set_orientation((pov[2], pov[0]), pov[1])
                     case 4:
                         # prioritÃ© au '-' de gauche â†’ diagonale (0,2)
-                        mesh.add_edge(pov[0], pov[2])
-                        mesh.set_orientation((pov[0], pov[2]), pov[3])
+                        
+                        mesh.add_edge(pov[1], pov[3])
+                        mesh.set_orientation((pov[1], pov[3]), pov[0])
                     case 5:
                         # prioritÃ© au '-' de gauche â†’ Ã©ventail depuis 0
-                        mesh.add_edge(pov[1], pov[3])
-                        mesh.add_edge(pov[0], pov[3])
-                        mesh.set_orientation((pov[0], pov[3]), pov[4])
-                        mesh.set_orientation((pov[3], pov[1]), pov[2])
+                        mesh.add_edge(pov[2], pov[4])
+                        mesh.add_edge(pov[1], pov[4])
+                        mesh.set_orientation((pov[4], pov[1]), pov[2])
+                        mesh.set_orientation((pov[4], pov[2]), pov[3])
                     case 6:
                         # prioritÃ© au '-' de gauche â†’ Ã©ventail depuis 0
-                        mesh.add_edge(pov[0], pov[2])
-                        mesh.add_edge(pov[2], pov[4])
-                        mesh.add_edge(pov[0], pov[4])
-                        mesh.set_orientation((pov[0], pov[4]), pov[2])
-                        mesh.set_orientation((pov[2], pov[0]), pov[4])
-                        mesh.set_orientation((pov[4], pov[2]), pov[0])
+                        mesh.add_edge(pov[1], pov[3])
+                        mesh.add_edge(pov[3], pov[5])
+                        mesh.add_edge(pov[5], pov[1])
+                        mesh.set_orientation((pov[5], pov[1]), pov[3])
+                        mesh.set_orientation((pov[1], pov[3]), pov[5])
+                        mesh.set_orientation((pov[3], pov[5]), pov[1])
                     case _:
                         pass
             case (RetriangulationTag.Plus, RetriangulationTag.Plus):
@@ -145,14 +147,14 @@ class Retriangulator:
                         mesh.set_orientation((pov[2], pov[0]), pov[1])
                     case 4:
                         # gate ++ OU gate -- : prioritÃ© cÃ´tÃ© droit â†’ diagonale (1,3)
-                        mesh.add_edge(pov[0], pov[2])
-                        mesh.set_orientation((pov[0], pov[2]), pov[3])
+                        mesh.add_edge(pov[1], pov[3])
+                        mesh.set_orientation((pov[1], pov[3]), pov[0])
                     case 5:
                         # ++ ou -- : prioritÃ© cÃ´tÃ© droit â†’ Ã©ventail depuis 4
-                        mesh.add_edge(pov[0], pov[2])
-                        mesh.add_edge(pov[4], pov[2])
-                        mesh.set_orientation((pov[2], pov[0]), pov[1])
-                        mesh.set_orientation((pov[4], pov[2]), pov[3])
+                        mesh.add_edge(pov[1], pov[3])
+                        mesh.add_edge(pov[0], pov[3])
+                        mesh.set_orientation((pov[1], pov[3]), pov[0])
+                        mesh.set_orientation((pov[0], pov[3]), pov[4])
                     case 6:
                         # ++ ou -- : prioritÃ© cÃ´tÃ© droit â†’ Ã©ventail depuis 5
                         mesh.add_edge(pov[0], pov[2])
@@ -168,13 +170,13 @@ class Retriangulator:
                     case 3:
                         mesh.set_orientation((pov[2], pov[0]), pov[1])
                     case 4:
-                        mesh.add_edge(pov[1], pov[3])
-                        mesh.set_orientation((pov[1], pov[3]), pov[0])
+                        mesh.add_edge(pov[0], pov[2])
+                        mesh.set_orientation((pov[0], pov[2]), pov[3])
                     case 5:
-                        mesh.add_edge(pov[1], pov[4])
-                        mesh.add_edge(pov[1], pov[3])
-                        mesh.set_orientation((pov[2], pov[4]), pov[0])
-                        mesh.set_orientation((pov[3], pov[1]), pov[2])
+                        mesh.add_edge(pov[0], pov[2])
+                        mesh.add_edge(pov[4], pov[2])
+                        mesh.set_orientation((pov[2], pov[0]), pov[1])
+                        mesh.set_orientation((pov[0], pov[2]), pov[4])
                     case 6:
                         mesh.add_edge(pov[5], pov[1])
                         mesh.add_edge(pov[3], pov[1])

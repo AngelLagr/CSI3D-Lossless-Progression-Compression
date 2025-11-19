@@ -184,7 +184,7 @@ def main():
     print("Face in set: ", test_face_in_set())
     #print("Vertices connections test (crude_sphere.obj): ", test_vertices_connections('example/fixed_crude_sphere.obj'))
     #print("Orientation test (crude_sphere.obj): ", test_sampled_orientation('example/fixed_crude_sphere.obj', 10))
-    print("Test parser (crude_sphere.obj): ", test_parser('example/crude_sphere.obj'))
+    print("Test parser (crude_sphere.obj): ", test_parser('example/crude_sphere_12.obj'))
 
 
 

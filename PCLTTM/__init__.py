@@ -66,7 +66,7 @@ class PCLTTM:
         initial_front_vertex = Vertex((0, 0, 10), self.mesh)
         return Gate((initial_left_vertex, initial_right_vertex), initial_front_vertex, self.mesh)
 
-    def compress(self) -> None:
+    def compress_null(self) -> None:
         if self.mesh is None:
             raise ValueError("Mesh not loaded. Please parse a file first.")
 
@@ -101,7 +101,7 @@ class PCLTTM:
         
 
 
-    def compress_old(self) -> None:
+    def compress(self) -> None:
         if self.mesh is None:
             raise ValueError("Mesh not loaded. Please parse a file first.")
 
