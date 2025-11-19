@@ -360,11 +360,11 @@ class PCLTTM:
         v_minus, v_plus = initial_gate.edge
         print("#############################CLEANING###################")
         # set all tags to Defaults
-        for v in self.retriangulator.retriangulation_tags.keys():
-            self.retriangulator.retriangulation_tags[v] = RetriangulationTag.Default
+        #for v in self.retriangulator.retriangulation_tags.keys():
+        #    self.retriangulator.retriangulation_tags[v] = RetriangulationTag.Default
 
-        self.retriangulator.retriangulation_tags[v_minus] = RetriangulationTag.Minus
-        self.retriangulator.retriangulation_tags[v_plus] = RetriangulationTag.Plus
+        #self.retriangulator.retriangulation_tags[v_minus] = RetriangulationTag.Minus
+        #self.retriangulator.retriangulation_tags[v_plus] = RetriangulationTag.Plus
 
         # Set all the vertex to free
 

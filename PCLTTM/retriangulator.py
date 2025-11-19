@@ -189,16 +189,16 @@ class Retriangulator:
                             pass
 
             for edge in edges_to_add:
-                if edge[1] in mesh.active_state.vertex_connexions.get(edge[0], set()):
+                if edge[1] in mesh.active_state.vertex_connections.get(edge[0], set()):
                     raise Exception(f"Edge {edge} already exists in the mesh.")
             
             for edge in edges_to_add:
                 mesh.add_edge(edge[0], edge[1])
+            mesh.remove_vertex(front_vertex, force=True)
 
             for orientation in orientations_to_set:
                 mesh.set_orientation(orientation[0], orientation[1])
                 
-            mesh.remove_vertex(front_vertex, force=True)
             
             return True
         except Exception as e:
