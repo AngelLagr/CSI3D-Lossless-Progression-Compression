@@ -108,12 +108,12 @@ class Retriangulator:
                         mesh.set_orientation((pov[2], pov[4]), pov[0])
                     case 6:
                         # prioritÃ© au '-' de droite â†’ Ã©ventail depuis 5
-                        mesh.add_edge(pov[5], pov[1])
-                        mesh.add_edge(pov[3], pov[1])
-                        mesh.add_edge(pov[5], pov[3])
-                        mesh.set_orientation((pov[1], pov[5]), pov[0])
-                        mesh.set_orientation((pov[5], pov[3]), pov[4])
-                        mesh.set_orientation((pov[3], pov[1]), pov[2])
+                        mesh.add_edge(pov[0], pov[2])
+                        mesh.add_edge(pov[0], pov[4])
+                        mesh.add_edge(pov[4], pov[2])
+                        mesh.set_orientation((pov[2], pov[0]), pov[1])
+                        mesh.set_orientation((pov[0], pov[4]), pov[5])
+                        mesh.set_orientation((pov[4], pov[2]), pov[3])
                     case _:
                         pass
             case (RetriangulationTag.Minus, RetriangulationTag.Plus):
@@ -157,12 +157,12 @@ class Retriangulator:
                         mesh.set_orientation((pov[0], pov[3]), pov[4])
                     case 6:
                         # ++ ou -- : prioritÃ© cÃ´tÃ© droit â†’ Ã©ventail depuis 5
-                        mesh.add_edge(pov[0], pov[2])
-                        mesh.add_edge(pov[2], pov[4])
-                        mesh.add_edge(pov[0], pov[4])
-                        mesh.set_orientation((pov[0], pov[4]), pov[5])
-                        mesh.set_orientation((pov[2], pov[0]), pov[1])
-                        mesh.set_orientation((pov[4], pov[2]), pov[3])
+                        mesh.add_edge(pov[1], pov[3])
+                        mesh.add_edge(pov[3], pov[5])
+                        mesh.add_edge(pov[1], pov[5])
+                        mesh.set_orientation((pov[1], pov[5]), pov[0])
+                        mesh.set_orientation((pov[3], pov[1]), pov[2])
+                        mesh.set_orientation((pov[5], pov[3]), pov[4])
                     case _:
                         pass
             case _:  # (RetriangulationTag.Minus, RetriangulationTag.Minus)
@@ -178,11 +178,11 @@ class Retriangulator:
                         mesh.set_orientation((pov[2], pov[0]), pov[1])
                         mesh.set_orientation((pov[0], pov[2]), pov[4])
                     case 6:
-                        mesh.add_edge(pov[5], pov[1])
-                        mesh.add_edge(pov[3], pov[1])
-                        mesh.add_edge(pov[5], pov[3])
-                        mesh.set_orientation((pov[1], pov[5]), pov[0])
-                        mesh.set_orientation((pov[5], pov[3]), pov[4])
-                        mesh.set_orientation((pov[3], pov[1]), pov[2])
+                        mesh.add_edge(pov[0], pov[2])
+                        mesh.add_edge(pov[4], pov[2])
+                        mesh.add_edge(pov[0], pov[4])
+                        mesh.set_orientation((pov[2], pov[0]), pov[1])
+                        mesh.set_orientation((pov[0], pov[4]), pov[5])
+                        mesh.set_orientation((pov[4], pov[2]), pov[3])
                     case _:
                         pass
