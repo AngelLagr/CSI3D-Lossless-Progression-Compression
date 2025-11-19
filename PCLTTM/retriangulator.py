@@ -196,6 +196,8 @@ class Retriangulator:
                 mesh.add_edge(edge[0], edge[1])
             mesh.remove_vertex(front_vertex, force=True)
 
+            mesh.remove_vertex(front_vertex, force=True)
+            
             for orientation in orientations_to_set:
                 mesh.set_orientation(orientation[0], orientation[1])
                 
