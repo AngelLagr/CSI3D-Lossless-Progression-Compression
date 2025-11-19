@@ -108,8 +108,8 @@ class PCLTTM:
         # ------------------------------------------------------------------
         # Initial gate selection
         # ------------------------------------------------------------------
-        initial_gate = self.mesh.get_random_gate()
-        #initial_gate = self.__initial_gate_for_crude_sphere_4()
+        #initial_gate = self.mesh.get_random_gate()
+        initial_gate = self.__initial_gate_for_test()
           
         if initial_gate is None:
             raise RuntimeError("Could not find an initial gate in the mesh.")
@@ -155,7 +155,7 @@ class PCLTTM:
                 "state:", vertex_state, left_vertex, right_vertex
             )
 
-            can_remove = self.mesh.can_remove_vertex(center_vertex) or True 
+            can_remove = self.mesh.can_remove_vertex(center_vertex)
 
             # ------------------------------------------------------------------
             # PROPER PATCH / DECIMATION (for free vertices)
@@ -406,7 +406,7 @@ class PCLTTM:
                 "state:", vertex_state, left_vertex, right_vertex
             )
 
-            can_remove = self.mesh.can_remove_vertex(center_vertex) or True 
+            can_remove = self.mesh.can_remove_vertex(center_vertex)
 
             # ------------------------------------------------------------------
             # PROPER PATCH / DECIMATION (for free vertices)
