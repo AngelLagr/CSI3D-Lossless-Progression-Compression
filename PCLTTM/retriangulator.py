@@ -19,9 +19,6 @@ class Retriangulator:
     def __init__(self):
         self.retriangulation_tags = dict()  # Hash(Vertex) -> Retriangulation tag (+ or -)
 
-    def standarize_retriangulation(self, patch: Patch) -> List[Face]:
-        pass
-
     def retriangulate(
         self,
         mesh,
@@ -49,60 +46,30 @@ class Retriangulator:
         right_tag = self.retriangulation_tags.get(
             right_vertex, RetriangulationTag.Default)
 
+        if left_tag == RetriangulationTag.Default or right_tag == RetriangulationTag.Default:
+            raise RuntimeError("Retriangulation tags must be defined for gate edge vertices")
+
         front_vertex = current_gate.front_vertex
 
-        self.tag_propagation(mesh, patch_oriented_vertex, left_tag, right_tag)
+        starting_tag = right_tag  
+        # Little edge case where on impair valence when the left and right tags are different we need to start from the opposite tag
+        if valence in [3, 5] and left_tag != right_tag and starting_tag == RetriangulationTag.Plus:
+            starting_tag = RetriangulationTag.Minus
+        self.tag_propagation(mesh, [v for v in patch_oriented_vertex if v not in current_gate.edge], starting_tag)
 
         self.triangulate_table(
             mesh, front_vertex, patch_oriented_vertex, left_tag, right_tag,  valence)
 
-    def tag_propagation(self, mesh,
-                        patch_oriented_vertex: List[Vertex],
-                        left_tag: str,
-                        right_tag: str,
-                        ) -> Dict[int, str]:
+    def tag_propagation(self, mesh, vertex_to_tag: List[Vertex], starting_tag: RetriangulationTag):
         # l'idée est d'alterner les + et les -, mais le côté droit de la gate d'entrée est toujours prioritaire.
         # Normalise les tags d'entrée pour éviter les valeurs Default qui provoquent un KeyError.
-        alternance = {
-            RetriangulationTag.Minus: RetriangulationTag.Plus,
-            RetriangulationTag.Plus: RetriangulationTag.Minus,
-        }
-
-        # Normalisation: si un côté est Default, on lui donne un tag cohérent.
-        # - Si les deux sont Default: priorité à droite => right: '-', left: '+'
-        # - Si un seul est Default: on lui affecte l'alternance de l'autre pour garantir left != right
-        if left_tag == RetriangulationTag.Default and right_tag == RetriangulationTag.Default:
-            right_tag = RetriangulationTag.Minus
-            left_tag = RetriangulationTag.Plus
-        elif left_tag == RetriangulationTag.Default:
-            # Garantit une alternance aux extrémités
-            left_tag = alternance.get(right_tag, RetriangulationTag.Plus)
-        elif right_tag == RetriangulationTag.Default:
-            right_tag = alternance.get(left_tag, RetriangulationTag.Minus)
-
-        # Choix du côté de départ selon la règle d'origine
-        if left_tag != right_tag:
-            if left_tag == RetriangulationTag.Minus:
-                start_tag = left_tag
-                start_side = 'left'
-            else:
-                start_tag = right_tag
-                start_side = 'right'
-        else:
-            start_tag = right_tag
-            start_side = 'right'
-
-        if start_side == 'right':
-            tag = start_tag
-            for vertex in patch_oriented_vertex[1:-1]:
-                tag = alternance[tag]
-                self.retriangulation_tags[vertex] = tag
-        else:
-            tag = start_tag
-            for vertex in reversed(patch_oriented_vertex[1:-1]):
-                tag = alternance[tag]
-                self.retriangulation_tags[vertex] = tag
-
+        tags = [RetriangulationTag.Minus, RetriangulationTag.Plus]
+        index = tags.index(starting_tag) if starting_tag in tags else 0
+        for vertex in vertex_to_tag:
+            index = (index + 1) % len(tags)
+            if self.retriangulation_tags[vertex] == RetriangulationTag.Default:
+                self.retriangulation_tags[vertex] = tags[index]
+        
     def triangulate_table(
         self, mesh, front_vertex: Vertex,
         patch_oriented_vertex: List[Vertex],
@@ -167,9 +134,9 @@ class Retriangulator:
                         mesh.add_edge(pov[0], pov[2])
                         mesh.add_edge(pov[2], pov[4])
                         mesh.add_edge(pov[0], pov[4])
-                        mesh.set_orientation((pov[0], pov[4]), pov[5])
-                        mesh.set_orientation((pov[2], pov[0]), pov[1])
-                        mesh.set_orientation((pov[4], pov[2]), pov[3])
+                        mesh.set_orientation((pov[0], pov[4]), pov[2])
+                        mesh.set_orientation((pov[2], pov[0]), pov[4])
+                        mesh.set_orientation((pov[4], pov[2]), pov[0])
                     case _:
                         pass
             case (RetriangulationTag.Plus, RetriangulationTag.Plus):

@@ -1,6 +1,6 @@
 from .vertex import Vertex
 from .constants import StateFlag
-from typing import Tuple
+from typing import List, Tuple
 
 
 class Face:
@@ -48,6 +48,36 @@ class Face:
         # NOTE: MeshTopology currently does NOT implement get_face_state.
         # This will only work if mesh is a type that defines that method.
         return self.mesh.get_face_state(self) if self.mesh else StateFlag.Free
+
+    def output_gates(self, starting_edge: Tuple[Vertex, Vertex]) -> List["Gate"]:
+        """
+        For each boundary edge around the center vertex, find the face on
+        the "outside" (the one that does *not* contain the center vertex)
+        and create a Gate towards that outside vertex.
+
+        This uses mesh.get_oriented_faces(edge), which should return (left_face, right_face).
+        """
+        if starting_edge is None or None in starting_edge:
+            return []
+
+        if starting_edge[0] not in self.vertices or starting_edge[1] not in self.vertices or self.mesh is None:
+            return []
+
+        # local import to avoid circular imports
+        from .gate import Gate
+
+        output_gates: List[Gate] = []
+
+        next_vertex = self.next_vertex(starting_edge)
+        oriented_faces = self.mesh.get_oriented_faces((next_vertex, starting_edge[0]))
+        if oriented_faces[1] is not None:
+            output_gates.append(Gate((next_vertex, starting_edge[0]), starting_edge[1], self.mesh))
+
+        oriented_faces = self.mesh.get_oriented_faces((starting_edge[1], next_vertex))
+        if oriented_faces[1] is not None:
+            output_gates.append(Gate((starting_edge[1], next_vertex), starting_edge[0], self.mesh))
+        
+        return output_gates
 
     # Internal functions
     def __lt__(self, other):

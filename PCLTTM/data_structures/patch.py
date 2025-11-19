@@ -15,18 +15,9 @@ class Patch:
         self.faces: List["Face"] = faces
         self.mesh = mesh
 
-        # Optional: used if you later want to store from which gate this patch was entered
-        self.input_gate: Optional["Gate"] = None
-
     # ------------------------------------------------------------------
     # Patch related functions
     # ------------------------------------------------------------------
-
-    def valence(self) -> int:
-        """
-        Number of incident faces (i.e. faces around the center vertex).
-        """
-        return len(self.faces)
 
     def barycenter(self) -> Optional[Vertex]:
         """
@@ -67,12 +58,6 @@ class Patch:
         """
         return None
 
-    def is_oriented(self) -> bool:
-        """
-        Returns True if an input gate was set (useful if you later use oriented patches).
-        """
-        return self.input_gate is not None
-
     def surrounding_vertices(
         self,
         starting_edge: Tuple[Vertex, Vertex]
@@ -90,9 +75,10 @@ class Patch:
             return []
 
         remaining_faces = set(self.faces)
-        sequence: List[Vertex] = []
+        remaining_faces.remove(Face((starting_edge[0], starting_edge[1], self.center_vertex)))
+        sequence: List[Vertex] = [starting_edge[0]]
 
-        current_vertex = starting_edge[0]
+        current_vertex = starting_edge[1]
 
         # Safety guard to avoid infinite loops in corrupted meshes
         max_steps = len(remaining_faces)
@@ -154,10 +140,13 @@ class Patch:
     # Mesh related functions
     # ------------------------------------------------------------------
 
-    def output_gates(
-        self,
-        starting_edge: Tuple[Vertex, Vertex]
-    ) -> List["Gate"]:
+    def valence(self) -> int:
+        """
+        Number of incident faces (i.e. faces around the center vertex).
+        """
+        return self.mesh.get_valence(self.center_vertex) if self.mesh else len(self.faces)
+
+    def output_gates(self, starting_edge: Tuple[Vertex, Vertex]) -> List["Gate"]:
         """
         For each boundary edge around the center vertex, find the face on
         the "outside" (the one that does *not* contain the center vertex)
