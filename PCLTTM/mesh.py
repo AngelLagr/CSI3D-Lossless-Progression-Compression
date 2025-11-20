@@ -28,55 +28,24 @@ class MeshTopology:
             self.orientations = dict()
 
         # We make two hypotheses for difference():
-        # 
+        # - self is one step more compressed than previous_state
+        # - self is included in previous_state, and there's more vertices in previous_state
+        # - Missing edges in previous_state are edges to remove
         # return (vertex_connections_to_add, edges_to_remove)
-        def difference(self, previous_state: "MeshTopology.State") -> Tuple[Dict, Dict]:
-            diff = MeshTopology.State()
+        def compression_difference(self, previous_state: "MeshTopology.State") -> Tuple[Dict, Dict]:
+            vertex_connections_to_add = dict()
+            edges_to_remove = dict()
 
-            # Vertices present in self but not in other
-            different_vertex = set(self.vertex_connections.keys()).difference(
-                set(other.vertex_connections.keys())
-            )
-            for fromV in different_vertex:
-                diff.vertex_connections[fromV] = deepcopy(
-                    self.vertex_connections[fromV]
-                )
-                for toV in self.vertex_connections[fromV]:
-                    if toV not in diff.vertex_connections:
-                        diff.vertex_connections[toV] = set()
+            vertex_to_add = set(previous_state.vertex_connections.keys()) - set(self.vertex_connections.keys())
+            for v in vertex_to_add:
+                vertex_connections_to_add[v] = previous_state.vertex_connections[v]
 
-                    diff.vertex_connections[toV].add(fromV)
-
-                    if (fromV, toV) in self.orientations:
-                        diff.orientations[(fromV, toV)
-                                          ] = self.orientations[(fromV, toV)]
-                    if (toV, fromV) in self.orientations:
-                        diff.orientations[(toV, fromV)
-                                          ] = self.orientations[(toV, fromV)]
-
-            # Vertices present in other but not in self
-            different_vertex = set(other.vertex_connections.keys()).difference(
-                set(self.vertex_connections.keys())
-            )
-            for fromV in different_vertex:
-                diff.vertex_connections[fromV] = deepcopy(
-                    other.vertex_connections[fromV]
-                )
-                for toV in other.vertex_connections[fromV]:
-                    if toV not in diff.vertex_connections:
-                        diff.vertex_connections[toV] = set()
-
-                    diff.vertex_connections[toV].add(fromV)
-
-                    if (fromV, toV) not in diff.orientations and (fromV, toV) in other.orientations:
-                        diff.orientations[(fromV, toV)
-                                          ] = other.orientations[(fromV, toV)]
-                    if (toV, fromV) not in diff.orientations and (toV, fromV) in other.orientations:
-                        diff.orientations[(toV, fromV)
-                                          ] = other.orientations[(toV, fromV)]
-
-            return diff
-
+            difference_in_edges = set(self.orientations.keys()).difference(set(previous_state.orientations.keys()))
+            for edge in difference_in_edges:
+                if (edge[1], edge[0]) not in edges_to_remove:
+                    edges_to_remove[edge] = self.orientations[edge]
+            
+            return (vertex_connections_to_add, edges_to_remove)
     # ----------------------------------------------------------------------
     # Constructors
     # ----------------------------------------------------------------------
@@ -108,13 +77,13 @@ class MeshTopology:
     # Transaction helpers (commit / rollback)
     # ----------------------------------------------------------------------
 
-    def commit(self) -> State:
+    def commit(self) -> Tuple[Dict, Dict]:
         """
         Save current active_state as a new committed state and return the diff
         with the previously committed state.
         """
         last_state = self.committed_states[-1]
-        diff = self.active_state.difference(last_state)
+        diff = self.active_state.compression_difference(last_state)
         self.committed_states.append(deepcopy(self.active_state))
         return diff
 
@@ -442,7 +411,7 @@ class MeshTopology:
 
         Vertices come from vertex_connections keys.
         Faces are reconstructed from the oriented faces around each vertex,
-        with deduplication so each face is written only once.
+        WE HAVE TO RESPECT THE ORIENTATION GIVEN BY THE MESH
         """
         # Collect vertices
         vertices = sorted(self.get_vertices())
@@ -454,29 +423,15 @@ class MeshTopology:
                 x, y, z = v.position
                 file_obj.write(f"v {x} {y} {z}\n")
 
-            # ---- collect unique faces ----
-            seen_faces = set()  # set of frozenset({v1, v2, v3})
+            # ---- collect unique faces preserving orientation ----
+            # Use a mapping from frozenset(vertices) -> oriented tuple(vertices)
+            # so we deduplicate faces while keeping the original vertex order
+            written_faces = set()  # frozenset({v1,v2,v3}) -> (v1, v2, v3)
 
             for v in vertices:
                 for face in self.get_faces(v):
-                    if face is None:
+                    if face is None or face in written_faces:
                         continue
 
-                    verts = tuple(face.vertices)
-
-                    # Skip faces whose vertices are no longer in the mesh
-                    if any(vv not in indices for vv in verts):
-                        continue
-
-                    key = frozenset(verts)
-                    if key in seen_faces:
-                        continue
-                    seen_faces.add(key)
-
-            # ---- write faces ----
-            for vert_set in seen_faces:
-                sorted_verts = sorted(vert_set, key=lambda vv: indices[vv])
-                idxs = [indices[vv] for vv in sorted_verts]
-                file_obj.write("f " + " ".join(str(i) for i in idxs) + "\n")
-    
-    
+                    file_obj.write("f " + " ".join(str(indices[v]) for v in face.vertices) + "\n")
+                    written_faces.add(face)

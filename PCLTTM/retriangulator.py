@@ -46,8 +46,11 @@ class Retriangulator:
         right_tag = self.retriangulation_tags.get(
             right_vertex, RetriangulationTag.Default)
 
-        if left_tag == RetriangulationTag.Default or right_tag == RetriangulationTag.Default:
-            raise RuntimeError("Retriangulation tags must be defined for gate edge vertices")
+        if left_tag == RetriangulationTag.Default:
+            left_tag = RetriangulationTag.Plus if right_tag == RetriangulationTag.Minus else RetriangulationTag.Minus
+        
+        if right_tag == RetriangulationTag.Default:
+            right_tag = RetriangulationTag.Minus if left_tag == RetriangulationTag.Plus else RetriangulationTag.Plus
 
         front_vertex = current_gate.front_vertex
 
@@ -68,7 +71,7 @@ class Retriangulator:
         for vertex in vertex_to_tag:
             index = (index + 1) % len(tags)
             if self.retriangulation_tags[vertex] == RetriangulationTag.Default:
-                print("Vertex", vertex, "tagged as", tags[index])
+                #print("Vertex", vertex, "tagged as", tags[index])
                 self.retriangulation_tags[vertex] = tags[index]
         
     def triangulate_table(
@@ -88,7 +91,7 @@ class Retriangulator:
             return False
 
         pov = patch_oriented_vertex  # alias court
-        print(pov)
+        #print(pov)
         try :
             edges_to_add = []
             orientations_to_set = []
@@ -206,6 +209,5 @@ class Retriangulator:
             
             return True
         except Exception as e:
-            print(f"Error during retriangulation: {e}")
             return False
 
