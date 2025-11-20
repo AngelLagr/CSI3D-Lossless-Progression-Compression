@@ -21,7 +21,7 @@ def main():
     vertex_idx: Dict[Vertex, int] = {}
     
     face_idx: Dict[Face, int] = {}
-    # When you writ "f x y z" in an OBJ file, you need: face_idx[Face((v_x, v_y, v_z))] = index_in_file
+    # When you write "f x y z" in an OBJ file, you need: face_idx[Face((v_x, v_y, v_z))] = index_in_file
 
     last_state = deepcopy(model.mesh.active_state)
     while model.mesh.rollback():
