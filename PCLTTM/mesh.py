@@ -41,7 +41,7 @@ class MeshTopology:
                 vertex_connections_to_add[v] = previous_state.vertex_connections[v]
 
             for edge in self.orientations.keys().difference(previous_state.orientations.keys()):
-                if (edge[1], edge[0]) not in edges_to_remove
+                if (edge[1], edge[0]) not in edges_to_remove:
                     edges_to_remove[edge] = self.orientations[edge]
             
             return (vertex_connections_to_add, edges_to_remove)
