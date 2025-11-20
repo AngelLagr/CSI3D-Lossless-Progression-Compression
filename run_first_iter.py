@@ -24,6 +24,7 @@ def main():
         num_vertex = new_num_vertex
         new_num_vertex = len(model_iter.mesh.get_vertices())
         if new_num_vertex == 4:
+            print(f"After iteration {iteration_compress}, number of vertices: {new_num_vertex}, old: {num_vertex}")
             break
         model_iter = PCLTTM()
         model_iter.parse_file(f'compression_step_{iteration_compress}.obj')

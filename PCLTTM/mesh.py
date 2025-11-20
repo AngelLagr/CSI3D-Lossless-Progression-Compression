@@ -415,6 +415,8 @@ class MeshTopology:
         # Collect vertices
         vertices = sorted(self.get_vertices())
         indices = {v: i + 1 for i, v in enumerate(vertices)}
+        # mapping position tuple -> index for faces that store plain position tuples
+        pos_to_index = {v.position: i + 1 for i, v in enumerate(vertices)}
 
         with open(path, "w") as file_obj:
             # ---- write vertices ----
@@ -423,14 +425,27 @@ class MeshTopology:
                 file_obj.write(f"v {x} {y} {z}\n")
 
             # ---- collect unique faces preserving orientation ----
-            # Use a mapping from frozenset(vertices) -> oriented tuple(vertices)
-            # so we deduplicate faces while keeping the original vertex order
-            written_faces = set()  # frozenset({v1,v2,v3}) -> (v1, v2, v3)
+            written_faces = set()
+
+            def _vertex_index(vtx):
+                # vtx may be a Vertex instance, or a position tuple
+                if vtx in indices:
+                    return indices[vtx]
+                if hasattr(vtx, "position") and vtx.position in pos_to_index:
+                    return pos_to_index[vtx.position]
+                if isinstance(vtx, tuple) and vtx in pos_to_index:
+                    return pos_to_index[vtx]
+                return None
 
             for v in vertices:
                 for face in self.get_faces(v):
                     if face is None or face in written_faces:
                         continue
 
-                    file_obj.write("f " + " ".join(str(indices[v]) for v in face.vertices) + "\n")
+                    idxs = [_vertex_index(vf) for vf in face.vertices]
+                    if any(i is None for i in idxs):
+                        print("Warning: skipping face with unresolved vertex:", face.vertices)
+                        continue
+
+                    file_obj.write("f " + " ".join(str(i) for i in idxs) + "\n")
                     written_faces.add(face)
