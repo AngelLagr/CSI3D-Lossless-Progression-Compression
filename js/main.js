@@ -7,7 +7,7 @@ function init() {
 
     let url = (document.URL.split('?')[1] || "example/test_complete.obj");
 
-    loader = new Loader(url, 1024, 20);
+    loader = new Loader(url, 1, 100);
     loader.start(function(elements) {
         for (let element of elements) {
             if (element !== undefined) {
