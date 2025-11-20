@@ -96,7 +96,7 @@ class Retriangulator:
                 case (RetriangulationTag.Plus, RetriangulationTag.Minus):
                     match valence:
                         case 3:
-                            orientations_to_set.append(((pov[2], pov[0]), pov[1]))
+                            orientations_to_set.append(((pov[0], pov[1]), pov[2]))
                         case 4:
                             # prioritÃ© au '-' de droite â†’ diagonale (1,3)
                             edges_to_add.append((pov[0], pov[2]))
@@ -120,7 +120,7 @@ class Retriangulator:
                 case (RetriangulationTag.Minus, RetriangulationTag.Plus):
                     match valence:
                         case 3:
-                            orientations_to_set.append(((pov[2], pov[0]), pov[1]))
+                            orientations_to_set.append(((pov[0], pov[1]), pov[2]))
                         case 4:
                             # prioritÃ© au '-' de gauche â†’ diagonale (0,2)
                             
@@ -145,7 +145,7 @@ class Retriangulator:
                 case (RetriangulationTag.Plus, RetriangulationTag.Plus):
                     match valence:
                         case 3:
-                            orientations_to_set.append(((pov[2], pov[0]), pov[1]))
+                            orientations_to_set.append(((pov[0], pov[1]), pov[2]))
                         case 4:
                             # gate ++ OU gate -- : prioritÃ© cÃ´tÃ© droit â†’ diagonale (1,3)
                             edges_to_add.append((pov[1], pov[3]))
@@ -169,7 +169,7 @@ class Retriangulator:
                 case _:  # (RetriangulationTag.Minus, RetriangulationTag.Minus)
                     match valence:
                         case 3:
-                            orientations_to_set.append(((pov[2], pov[0]), pov[1]))
+                            orientations_to_set.append(((pov[0], pov[1]), pov[2]))
                         case 4:
                             edges_to_add.append((pov[0], pov[2]))
                             orientations_to_set.append(((pov[0], pov[2]), pov[3]))

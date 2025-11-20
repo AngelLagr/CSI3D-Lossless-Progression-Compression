@@ -313,7 +313,6 @@ class MeshTopology:
             self.active_state.orientations[(fromV, other_vertex)] = (toV, temp4[1])
         
         #The other side
-
         temp5 = self.active_state.orientations.get((third_vertex,toV), (None, None))
         temp6 = self.active_state.orientations.get((fromV,third_vertex), (None, None))
         temp7 = self.active_state.orientations.get((toV,other_vertex), (None, None))
@@ -324,7 +323,6 @@ class MeshTopology:
             self.active_state.orientations[(toV,other_vertex)] = (temp7[0],fromV)
             self.active_state.orientations[(other_vertex,fromV)] = (temp8[0],toV)
         
-
         return True
 
     def get_connected_vertices(self, vertex: Vertex) -> Set[Vertex]:
@@ -485,3 +483,5 @@ class MeshTopology:
                 sorted_verts = sorted(vert_set, key=lambda vv: indices[vv])
                 idxs = [indices[vv] for vv in sorted_verts]
                 file_obj.write("f " + " ".join(str(i) for i in idxs) + "\n")
+    
+    

@@ -400,6 +400,7 @@ class PCLTTM:
                 FiFo.append(gate)
         # end while
 
+
     def _cleaning_phase_old(self, initial_gate) -> None:
         FiFo = [initial_gate]
         for v in self.state_flags.keys():
