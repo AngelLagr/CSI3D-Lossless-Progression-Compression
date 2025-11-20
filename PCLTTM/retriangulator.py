@@ -96,95 +96,96 @@ class Retriangulator:
                 case (RetriangulationTag.Plus, RetriangulationTag.Minus):
                     match valence:
                         case 3:
-                            orientations_to_set.append(((pov[2], pov[0]), pov[1]))
+                            orientations_to_set.append(((pov[0], pov[1]), (pov[2], None)))
                         case 4:
                             # prioritÃ© au '-' de droite â†’ diagonale (1,3)
                             edges_to_add.append((pov[0], pov[2]))
-                            orientations_to_set.append(((pov[0], pov[2]), pov[3]))
+                            orientations_to_set.append(((pov[0], pov[2]), (pov[3], pov[1])))
                         case 5:
                             # prioritÃ© au '-' de droite â†’ Ã©ventail depuis 4
                             edges_to_add.append((pov[0], pov[2]))
                             edges_to_add.append((pov[2], pov[4]))
-                            orientations_to_set.append(((pov[0], pov[2]), pov[4]))
-                            orientations_to_set.append(((pov[2], pov[4]), pov[0]))
+                            orientations_to_set.append(((pov[0], pov[2]), (pov[4], pov[1])))
+                            orientations_to_set.append(((pov[2], pov[4]), (pov[0], pov[3])))
                         case 6:
                             # prioritÃ© au '-' de droite â†’ Ã©ventail depuis 5
                             edges_to_add.append((pov[0], pov[2]))
                             edges_to_add.append((pov[0], pov[4]))
                             edges_to_add.append((pov[4], pov[2]))
-                            orientations_to_set.append(((pov[2], pov[0]), pov[1]))
-                            orientations_to_set.append(((pov[0], pov[4]), pov[5]))
-                            orientations_to_set.append(((pov[4], pov[2]), pov[3]))
+                            orientations_to_set.append(((pov[2], pov[0]), (pov[1], pov[4])))
+                            orientations_to_set.append(((pov[0], pov[4]), (pov[5], pov[2])))
+                            orientations_to_set.append(((pov[4], pov[2]), (pov[3], pov[0])))
                         case _:
                             pass
                 case (RetriangulationTag.Minus, RetriangulationTag.Plus):
                     match valence:
                         case 3:
-                            orientations_to_set.append(((pov[2], pov[0]), pov[1]))
+                            orientations_to_set.append(((pov[0], pov[1]), (pov[2], None)))
                         case 4:
                             # prioritÃ© au '-' de gauche â†’ diagonale (0,2)
                             
                             edges_to_add.append((pov[1], pov[3]))
-                            orientations_to_set.append(((pov[1], pov[3]), pov[0]))
+                            orientations_to_set.append(((pov[1], pov[3]), (pov[0], pov[2])))
                         case 5:
                             # prioritÃ© au '-' de gauche â†’ Ã©ventail depuis 0
                             edges_to_add.append((pov[2], pov[4]))
                             edges_to_add.append((pov[1], pov[4]))
-                            orientations_to_set.append(((pov[4], pov[1]), pov[2]))
-                            orientations_to_set.append(((pov[4], pov[2]), pov[3]))
+                            orientations_to_set.append(((pov[4], pov[1]), (pov[2], pov[0])))
+                            orientations_to_set.append(((pov[4], pov[2]), (pov[3], pov[1])))
                         case 6:
                             # prioritÃ© au '-' de gauche â†’ Ã©ventail depuis 0
                             edges_to_add.append((pov[1], pov[3]))
                             edges_to_add.append((pov[3], pov[5]))
                             edges_to_add.append((pov[5], pov[1]))
-                            orientations_to_set.append(((pov[5], pov[1]), pov[3]))
-                            orientations_to_set.append(((pov[1], pov[3]), pov[5]))
-                            orientations_to_set.append(((pov[3], pov[5]), pov[1]))
+                            orientations_to_set.append(((pov[5], pov[1]), (pov[3], pov[0])))
+                            orientations_to_set.append(((pov[1], pov[3]), (pov[5], pov[2])))
+                            orientations_to_set.append(((pov[3], pov[5]), (pov[1], pov[4])))
                         case _:
                             pass
                 case (RetriangulationTag.Plus, RetriangulationTag.Plus):
                     match valence:
                         case 3:
-                            orientations_to_set.append(((pov[2], pov[0]), pov[1]))
+                            orientations_to_set.append(((pov[0], pov[1]), (pov[2], None)))
                         case 4:
                             # gate ++ OU gate -- : prioritÃ© cÃ´tÃ© droit â†’ diagonale (1,3)
                             edges_to_add.append((pov[1], pov[3]))
-                            orientations_to_set.append(((pov[1], pov[3]), pov[0]))
+                            orientations_to_set.append(((pov[1], pov[3]), (pov[0], pov[2])))
                         case 5:
                             # ++ ou -- : prioritÃ© cÃ´tÃ© droit â†’ Ã©ventail depuis 4
                             edges_to_add.append((pov[1], pov[3]))
                             edges_to_add.append((pov[0], pov[3]))
-                            orientations_to_set.append(((pov[1], pov[3]), pov[0]))
-                            orientations_to_set.append(((pov[0], pov[3]), pov[4]))
+                            orientations_to_set.append(((pov[1], pov[3]), (pov[0], pov[2])))
+                            orientations_to_set.append(((pov[0], pov[3]), (pov[4], pov[1])))
                         case 6:
                             # ++ ou -- : prioritÃ© cÃ´tÃ© droit â†’ Ã©ventail depuis 5
                             edges_to_add.append((pov[1], pov[3]))
                             edges_to_add.append((pov[3], pov[5]))
                             edges_to_add.append((pov[1], pov[5]))
-                            orientations_to_set.append(((pov[1], pov[5]), pov[0]))
-                            orientations_to_set.append(((pov[3], pov[1]), pov[2]))
-                            orientations_to_set.append(((pov[5], pov[3]), pov[4]))
+                            orientations_to_set.append(((pov[1], pov[5]), (pov[0], pov[3])))
+                            orientations_to_set.append(((pov[3], pov[1]), (pov[2], pov[5])))
+                            orientations_to_set.append(((pov[5], pov[3]), (pov[4], pov[1])))
                         case _:
                             pass
                 case _:  # (RetriangulationTag.Minus, RetriangulationTag.Minus)
                     match valence:
                         case 3:
-                            orientations_to_set.append(((pov[2], pov[0]), pov[1]))
+                            orientations_to_set.append(((pov[0], pov[1]), (pov[2], None)))
                         case 4:
                             edges_to_add.append((pov[0], pov[2]))
-                            orientations_to_set.append(((pov[0], pov[2]), pov[3]))
+                            orientations_to_set.append(((pov[0], pov[2]), (pov[3], pov[1])))
                         case 5:
                             edges_to_add.append((pov[0], pov[2]))
                             edges_to_add.append((pov[4], pov[2]))
-                            orientations_to_set.append(((pov[2], pov[0]), pov[1]))
-                            orientations_to_set.append(((pov[0], pov[2]), pov[4]))
+                            orientations_to_set.append(((pov[2], pov[0]), (pov[1], pov[4])))
+                            orientations_to_set.append(((pov[0], pov[2]), (pov[4], pov[1])))
                         case 6:
                             edges_to_add.append((pov[0], pov[2]))
                             edges_to_add.append((pov[4], pov[2]))
                             edges_to_add.append((pov[0], pov[4]))
-                            orientations_to_set.append(((pov[2], pov[0]), pov[1]))
-                            orientations_to_set.append(((pov[0], pov[4]), pov[5]))
-                            orientations_to_set.append(((pov[4], pov[2]), pov[3]))
+                            orientations_to_set.append(((pov[2], pov[0]), (pov[1], pov[4])))
+                            orientations_to_set.append(((pov[0], pov[4]), (pov[5], pov[2])))
+                            orientations_to_set.append(((pov[4], pov[2]), (pov[3], pov[0])))
+                            
                         case _:
                             pass
 
@@ -194,10 +195,13 @@ class Retriangulator:
             
             for edge in edges_to_add:
                 mesh.add_edge(edge[0], edge[1])
+
             mesh.remove_vertex(front_vertex, force=True)
             
             for orientation in orientations_to_set:
-                mesh.set_orientation(orientation[0], orientation[1])
+                # set orientation with the left vertex and right vertex (connected to the front_vertex)
+
+                mesh.set_orientation(orientation[0],orientation[1])
                 
             
             return True

@@ -94,7 +94,7 @@ class MeshTopology:
             elif isinstance(elem, Face):
                 for edge in elem.edges():
                     mesh.add_edge(*edge)
-                    mesh.set_orientation(edge, elem.next_vertex(edge))
+                    mesh.set_orientation(edge, (elem.next_vertex(edge) , None))
         return mesh
 
     def __init__(self):
@@ -268,7 +268,7 @@ class MeshTopology:
         from_to: (fromV, toV)
         third_vertex: vertex of the face (fromV, toV, third_vertex) for the left side.
         """
-    def set_orientation(self, from_to: Tuple[Vertex, Vertex], third_vertex: Vertex) -> bool:
+    def set_orientation(self, from_to: Tuple[Vertex, Vertex], left_right: Tuple[Vertex, Vertex]) -> bool:
         
         fromV, toV = from_to
         if (fromV not in self.active_state.vertex_connections
@@ -276,20 +276,11 @@ class MeshTopology:
             return False
         
         
-        connected_to_from = self.active_state.vertex_connections[fromV]
-        connected_to_to = self.active_state.vertex_connections[toV]
-        common_neighbours = connected_to_from.intersection(connected_to_to)
-        common_neighbours.discard(toV)
-
-        if len(common_neighbours) not in {0, 1, 2, 3}:
-            print("Badly structured mesh, can't define the orientation")
-            print("Wrong number of common neighbours for edge", from_to, ": ", common_neighbours)
-        #    return False
-
-        other_vertex = next(
-            (v for v in common_neighbours if v != third_vertex),
-            None,
-        )
+        third_vertex, other_vertex = left_right
+        if third_vertex is None:
+            third_vertex = self.active_state.orientations.get(from_to, (None, None))[0]
+        if other_vertex is None:
+            other_vertex = self.active_state.orientations.get(from_to, (None, None))[1]
         
         opposite_side = (toV, fromV)
         #if from_to in self.active_state.orientations:
