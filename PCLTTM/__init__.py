@@ -285,7 +285,11 @@ class PCLTTM:
                     #print("\t- ", f)
 
                 # Get output gates and ring vertices
-                out_gates = patch.output_gates(current_gate.edge)
+                out_gates_aux = patch.output_gates(current_gate.edge)
+                for g in out_gates_aux:
+                    conquered_faces.add(g.to_face())
+                    for g_out in g.to_face().output_gates(g.edge):
+                        out_gates.append(g_out)
                 #print(len(out_gates), "gates in the patch")
 
                 #print("Remove patch central vertex:", center_vertex)
