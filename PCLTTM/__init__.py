@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict, Set
+from typing import List, Optional, Dict, Set, Tuple
 
 from PCLTTM.data_structures.face import Face
 
@@ -187,7 +187,7 @@ class PCLTTM:
             iteration += 1
         # end while
 
-        
+        self.mesh.export_to_obj(f"decimation.obj")
         adjacent_vertex = self.mesh.get_oriented_vertices(initial_gate.edge)
         new_front_vertex = None
         if adjacent_vertex[0] is not None:
@@ -225,6 +225,7 @@ class PCLTTM:
         #         )
         
         # Debug: export the result
+        self.mesh.commit()
 
     
     def _cleaning_phase(self, initial_gate) -> None :
