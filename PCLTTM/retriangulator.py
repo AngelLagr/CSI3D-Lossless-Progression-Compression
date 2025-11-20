@@ -123,7 +123,7 @@ class Retriangulator:
                 case (RetriangulationTag.Minus, RetriangulationTag.Plus):
                     match valence:
                         case 3:
-                            orientations_to_set.append(((pov[2], pov[0]), pov[1]))
+                            orientations_to_set.append(((pov[0], pov[1]), (pov[2], None)))
                         case 4:
                             # prioritÃ© au '-' de gauche â†’ diagonale (0,2)
                             

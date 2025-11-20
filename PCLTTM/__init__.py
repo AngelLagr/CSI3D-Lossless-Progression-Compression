@@ -225,7 +225,7 @@ class PCLTTM:
         #         )
         
         # Debug: export the result
-        self.mesh.commit()
+        #self.mesh.commit()
 
     
     def _cleaning_phase(self, initial_gate) -> None :
