@@ -482,7 +482,7 @@ class PCLTTM:
                         )
                         FiFo.append(gate1)
 
-                # Right side
+                # Right side ##################### Inverted for no reason ??? ################## maybe retriangulate for 6 valence is wrong oriented   
                 if oriented_v2[1] is not None:
                     next_v = oriented_v2[1]
                     if self.state_flags.get(next_v, StateFlag.Free) == StateFlag.Free:
