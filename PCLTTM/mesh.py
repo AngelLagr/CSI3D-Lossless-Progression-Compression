@@ -36,11 +36,12 @@ class MeshTopology:
             vertex_connections_to_add = dict()
             edges_to_remove = dict()
 
-            vertex_to_add = previous_state.vertex_connections.keys() - self.vertex_connections.keys()
+            vertex_to_add = set(previous_state.vertex_connections.keys()) - set(self.vertex_connections.keys())
             for v in vertex_to_add:
                 vertex_connections_to_add[v] = previous_state.vertex_connections[v]
 
-            for edge in self.orientations.keys().difference(previous_state.orientations.keys()):
+            difference_in_edges = set(self.orientations.keys()).difference(set(previous_state.orientations.keys()))
+            for edge in difference_in_edges:
                 if (edge[1], edge[0]) not in edges_to_remove:
                     edges_to_remove[edge] = self.orientations[edge]
             
