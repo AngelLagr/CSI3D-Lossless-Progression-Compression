@@ -151,8 +151,6 @@ class PCLTTM:
 
         iteration = 1
         while FiFo:
-            #if iteration > 50:
-            #    break
 
             #print("Remaining gates in FiFo:", len(FiFo))
             current_gate = FiFo.pop(0)
@@ -199,7 +197,6 @@ class PCLTTM:
                     self.set_vertex_state(vertex, StateFlag.Conquered)
                 
                 self.mesh.export_to_obj(f"decimation_step_{iteration}.obj")
-
 
             # ------------------------------------------------------------------
             # NULL PATCH (for free vertices that cannot be decimated cleanly)
