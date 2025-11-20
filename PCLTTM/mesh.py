@@ -1,7 +1,7 @@
 from collections import deque
 from copy import deepcopy
 import random
-from typing import List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from .data_structures import Vertex, Face, Gate, Patch
 from .obja_parser import ObjaReader, ObjaWriter
@@ -27,8 +27,10 @@ class MeshTopology:
             #   (3rd vertex of left face [from->to], 3rd vertex of right face [to->from])
             self.orientations = dict()
 
-        # self has priority over other on orientations conflict
-        def difference(self, other: "MeshTopology.State") -> "MeshTopology.State":
+        # We make two hypotheses for difference():
+        # 
+        # return (vertex_connections_to_add, edges_to_remove)
+        def difference(self, previous_state: "MeshTopology.State") -> Tuple[Dict, Dict]:
             diff = MeshTopology.State()
 
             # Vertices present in self but not in other
@@ -94,7 +96,7 @@ class MeshTopology:
             elif isinstance(elem, Face):
                 for edge in elem.edges():
                     mesh.add_edge(*edge)
-                    mesh.set_orientation(edge, elem.next_vertex(edge))
+                    mesh.set_orientation(edge, (elem.next_vertex(edge) , None))
         return mesh
 
     def __init__(self):
@@ -116,7 +118,7 @@ class MeshTopology:
         self.committed_states.append(deepcopy(self.active_state))
         return diff
 
-    def rollback(self):
+    def rollback(self) -> bool:
         """
         Restore the previous committed state (if any).
         Never removes the initial baseline state.
@@ -125,6 +127,8 @@ class MeshTopology:
             # Pop current snapshot and revert to the one before it.
             self.committed_states.pop()
             self.active_state = deepcopy(self.committed_states[-1])
+            return True
+        return False
         # else: nothing to rollback
 
     # ----------------------------------------------------------------------
@@ -268,7 +272,7 @@ class MeshTopology:
         from_to: (fromV, toV)
         third_vertex: vertex of the face (fromV, toV, third_vertex) for the left side.
         """
-    def set_orientation(self, from_to: Tuple[Vertex, Vertex], third_vertex: Vertex) -> bool:
+    def set_orientation(self, from_to: Tuple[Vertex, Vertex], left_right: Tuple[Vertex, Vertex]) -> bool:
         
         fromV, toV = from_to
         if (fromV not in self.active_state.vertex_connections
@@ -276,20 +280,11 @@ class MeshTopology:
             return False
         
         
-        connected_to_from = self.active_state.vertex_connections[fromV]
-        connected_to_to = self.active_state.vertex_connections[toV]
-        common_neighbours = connected_to_from.intersection(connected_to_to)
-        common_neighbours.discard(toV)
-
-        if len(common_neighbours) not in {0, 1, 2, 3}:
-            print("Badly structured mesh, can't define the orientation")
-            print("Wrong number of common neighbours for edge", from_to, ": ", common_neighbours)
-        #    return False
-
-        other_vertex = next(
-            (v for v in common_neighbours if v != third_vertex),
-            None,
-        )
+        third_vertex, other_vertex = left_right
+        if third_vertex is None:
+            third_vertex = self.active_state.orientations.get(from_to, (None, None))[0]
+        if other_vertex is None:
+            other_vertex = self.active_state.orientations.get(from_to, (None, None))[1]
         
         opposite_side = (toV, fromV)
         #if from_to in self.active_state.orientations:

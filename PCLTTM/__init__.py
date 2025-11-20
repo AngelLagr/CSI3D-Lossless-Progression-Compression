@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict, Set
+from typing import List, Optional, Dict, Set, Tuple
 
 from PCLTTM.data_structures.face import Face
 
@@ -133,7 +133,7 @@ class PCLTTM:
         # Initial gate selection
         # ------------------------------------------------------------------
         #initial_gate = self.mesh.get_random_gate()
-        initial_gate = self.__initial_gate_for_test()
+        initial_gate = self.__initial_gate_for_crude_sphere_6()
           
         if initial_gate is None:
             raise RuntimeError("Could not find an initial gate in the mesh.")
@@ -151,8 +151,6 @@ class PCLTTM:
 
         iteration = 1
         while FiFo:
-            if iteration > 50:
-                break
 
             #print("Remaining gates in FiFo:", len(FiFo))
             current_gate = FiFo.pop(0)
@@ -198,6 +196,7 @@ class PCLTTM:
                 for vertex in patch_vertices:
                     self.set_vertex_state(vertex, StateFlag.Conquered)
                 
+                self.mesh.export_to_obj(f"decimation_step_{iteration}.obj")
 
             # ------------------------------------------------------------------
             # NULL PATCH (for free vertices that cannot be decimated cleanly)
@@ -217,11 +216,10 @@ class PCLTTM:
             for gate in out_gates:
                 FiFo.append(gate)
 
-            self.mesh.export_to_obj(f"decimation_step_{iteration}.obj")
             iteration += 1
         # end while
 
-        
+        self.mesh.export_to_obj(f"decimation.obj")
         adjacent_vertex = self.mesh.get_oriented_vertices(initial_gate.edge)
         new_front_vertex = None
         if adjacent_vertex[0] is not None:
@@ -236,6 +234,7 @@ class PCLTTM:
         self.mesh.export_to_obj(f"decimation_step_final.obj")
         
         # Debug: export the result
+        self.mesh.commit()
 
     
 

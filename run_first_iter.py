@@ -7,7 +7,7 @@ def main():
     """
     np.seterr(invalid='raise')
     model = PCLTTM()
-    model.parse_file('example/test_complete.obj')
+    model.parse_file('example/crude_sphere_6.obj')
 
     model.compress()
 
