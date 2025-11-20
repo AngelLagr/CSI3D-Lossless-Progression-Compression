@@ -69,13 +69,35 @@ class Face:
         output_gates: List[Gate] = []
 
         next_vertex = self.next_vertex(starting_edge)
-        oriented_faces = self.mesh.get_oriented_faces((next_vertex, starting_edge[0]))
-        if oriented_faces[1] is not None:
-            output_gates.append(Gate((next_vertex, starting_edge[0]), starting_edge[1], self.mesh))
 
-        oriented_faces = self.mesh.get_oriented_faces((starting_edge[1], next_vertex))
-        if oriented_faces[1] is not None:
-            output_gates.append(Gate((starting_edge[1], next_vertex), starting_edge[0], self.mesh))
+        #left_outward_face = next((
+        #            f for f in self.mesh.get_oriented_faces((next_vertex, starting_edge[0]))
+        #            if f != self
+        #        ), None)
+        #left_outward_vertex = left_outward_face.next_vertex((next_vertex, starting_edge[0])) if left_outward_face is not None else None
+        #if left_outward_vertex is not None:
+        #    output_gates.append(Gate((next_vertex, starting_edge[0]), left_outward_vertex, self.mesh))
+        #else:
+        #    print("Warning: oriented left face's outward vertex is the center vertex itself.")
+
+        #right_outward_face = next((
+        #            f for f in self.mesh.get_oriented_faces((starting_edge[1], next_vertex))
+        #            if f != self
+        #        ), None)
+        #right_outward_vertex = right_outward_face.next_vertex((starting_edge[1], next_vertex)) if right_outward_face is not None else None
+        #if left_outward_vertex is not None:
+        #    output_gates.append(Gate((next_vertex, starting_edge[1]), right_outward_vertex, self.mesh))
+
+
+        left_edge = (starting_edge[0], next_vertex)
+        oriented_faces = self.mesh.get_oriented_faces(left_edge)
+        if oriented_faces[0] is not None:
+            output_gates.append(Gate(left_edge, oriented_faces[0].next_vertex(left_edge), self.mesh))
+
+        right_edge = (next_vertex, starting_edge[1])
+        oriented_faces = self.mesh.get_oriented_faces(right_edge)
+        if oriented_faces[0] is not None:
+            output_gates.append(Gate(right_edge, oriented_faces[0].next_vertex(right_edge), self.mesh))
         
         return output_gates
 

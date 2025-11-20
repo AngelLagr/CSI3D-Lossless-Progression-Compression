@@ -71,14 +71,13 @@ class Patch:
         if starting_edge is None or None in starting_edge:
             return []
 
-        if not self.faces:
+        from PCLTTM.data_structures.face import Face
+        current_face = Face((starting_edge[0], starting_edge[1], self.center_vertex), self.mesh)
+        if not self.faces or current_face not in self.faces:
             return []
         
-        from PCLTTM.data_structures.face import Face
-
-
         remaining_faces = set(self.faces)
-        remaining_faces.remove(Face((starting_edge[0], starting_edge[1], self.center_vertex)))
+        remaining_faces.remove(current_face)
         sequence: List[Vertex] = [starting_edge[0], starting_edge[1]]
 
         current_vertex = starting_edge[1]
@@ -88,15 +87,11 @@ class Patch:
 
         for _ in range(max_steps):
             # Find a face incident to both current_vertex and center_vertex
-            face = next(
-                (
-                    f
-                    for f in remaining_faces
+            face = next((
+                    f for f in remaining_faces
                     if (current_vertex in f.vertices)
                     and (self.center_vertex in f.vertices)
-                ),
-                None,
-            )
+                ), None)
 
             if face is None:
                 # No more connected faces around the center from current_vertex
