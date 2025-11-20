@@ -21,7 +21,7 @@ def load_obj(path):
 # --------------------------
 #      MAIN
 # --------------------------
-obj_path = "decimation_step_4.obj"   # <-- mets ton fichier ici
+obj_path = "compression_step_2.obj"   # <-- mets ton fichier ici
 vertices, faces = load_obj(obj_path)
 
 fig = plt.figure()

@@ -440,7 +440,7 @@ class MeshTopology:
 
         Vertices come from vertex_connections keys.
         Faces are reconstructed from the oriented faces around each vertex,
-        with deduplication so each face is written only once.
+        WE HAVE TO RESPECT THE ORIENTATION GIVEN BY THE MESH
         """
         # Collect vertices
         vertices = sorted(self.get_vertices())
@@ -452,27 +452,15 @@ class MeshTopology:
                 x, y, z = v.position
                 file_obj.write(f"v {x} {y} {z}\n")
 
-            # ---- collect unique faces ----
-            seen_faces = set()  # set of frozenset({v1, v2, v3})
+            # ---- collect unique faces preserving orientation ----
+            # Use a mapping from frozenset(vertices) -> oriented tuple(vertices)
+            # so we deduplicate faces while keeping the original vertex order
+            written_faces = set()  # frozenset({v1,v2,v3}) -> (v1, v2, v3)
 
             for v in vertices:
                 for face in self.get_faces(v):
-                    if face is None:
+                    if face is None or face in written_faces:
                         continue
 
-                    verts = tuple(face.vertices)
-
-                    # Skip faces whose vertices are no longer in the mesh
-                    if any(vv not in indices for vv in verts):
-                        continue
-
-                    key = frozenset(verts)
-                    if key in seen_faces:
-                        continue
-                    seen_faces.add(key)
-
-            # ---- write faces ----
-            for vert_set in seen_faces:
-                sorted_verts = sorted(vert_set, key=lambda vv: indices[vv])
-                idxs = [indices[vv] for vv in sorted_verts]
-                file_obj.write("f " + " ".join(str(i) for i in idxs) + "\n")
+                    file_obj.write("f " + " ".join(str(indices[v]) for v in face.vertices) + "\n")
+                    written_faces.add(face)
