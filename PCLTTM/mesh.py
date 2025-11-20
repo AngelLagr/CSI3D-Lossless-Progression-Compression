@@ -1,7 +1,7 @@
 from collections import deque
 from copy import deepcopy
 import random
-from typing import List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from .data_structures import Vertex, Face, Gate, Patch
 from .obja_parser import ObjaReader, ObjaWriter
@@ -27,8 +27,10 @@ class MeshTopology:
             #   (3rd vertex of left face [from->to], 3rd vertex of right face [to->from])
             self.orientations = dict()
 
-        # self has priority over other on orientations conflict
-        def difference(self, other: "MeshTopology.State") -> "MeshTopology.State":
+        # We make two hypotheses for difference():
+        # 
+        # return (vertex_connections_to_add, edges_to_remove)
+        def difference(self, previous_state: "MeshTopology.State") -> Tuple[Dict, Dict]:
             diff = MeshTopology.State()
 
             # Vertices present in self but not in other
@@ -116,7 +118,7 @@ class MeshTopology:
         self.committed_states.append(deepcopy(self.active_state))
         return diff
 
-    def rollback(self):
+    def rollback(self) -> bool:
         """
         Restore the previous committed state (if any).
         Never removes the initial baseline state.
@@ -125,6 +127,8 @@ class MeshTopology:
             # Pop current snapshot and revert to the one before it.
             self.committed_states.pop()
             self.active_state = deepcopy(self.committed_states[-1])
+            return True
+        return False
         # else: nothing to rollback
 
     # ----------------------------------------------------------------------
