@@ -1,3 +1,5 @@
+This github is a class project where we have to implement the algorithm describe in the following paper : https://pages.saclay.inria.fr/mathieu.desbrun/pubs/AD_progressive_300dpi.pdf
+
 # OBJ augmenté
 
 WaveFront OBJ est un format permettant d'encoder des modèles 3D de manière
