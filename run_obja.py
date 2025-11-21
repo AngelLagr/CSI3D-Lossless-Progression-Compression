@@ -18,7 +18,7 @@ def print_initial_model(mesh, output_file):
     # Collect vertices
     vertices = sorted(mesh.get_vertices())
     vertices_indices: Dict[Vertex, int] = {v: i + 1 for i, v in enumerate(vertices)}
-    faces_indices: List[Tuple[Vertex, Vertex, Vertex], int] = []
+    faces_indices: Dict[Tuple[Vertex, Vertex, Vertex], int] = {}
 
     # ---- write vertices ----
     for v in vertices:
@@ -38,7 +38,7 @@ def print_initial_model(mesh, output_file):
             output_file.write(
                 "f " + " ".join(str(vertices_indices[vtx]) for vtx in face.vertices) + "\n"
             )
-            faces_indices.append(face)
+            faces_indices[face] = len(faces_indices) + 1
 
     return vertices_indices, faces_indices
 
@@ -88,7 +88,7 @@ def main():
         print("No compression steps recorded, OBJA not generated.")
         return
 
-    with open('test_complete.obja', 'w') as output_file:
+    with open('test_complete_v3.obja', 'w') as output_file:
         # On considère que le dernier step est le plus compressé (comme avant)
         vertex_idx, face_idx = print_initial_model(steps[-1].mesh, output_file)
         print(f"Initial model: {len(vertex_idx)} vertices, {len(face_idx)} faces.")
@@ -100,26 +100,19 @@ def main():
             compression_diffs = steps[i].mesh.active_state.compression_difference(steps[i - 1].mesh.active_state)
 
             vertex_diffs = compression_diffs[0]
-            edge_diffs = compression_diffs[1]
+            face_to_delete = compression_diffs[1]
 
-            for edge, left_right in edge_diffs.items():  # edges to remove
-                left_face = Face((edge[0], edge[1], left_right[0]))
-                right_face = Face((edge[1], edge[0], left_right[1]))
-                if left_face in face_idx:
-                    left_face_idx = face_idx.index(left_face)
-                    output_file.write(f"df {left_face_idx + 1}\n")
-                    face_idx.remove(left_face)
-                    print("Deleted left face:", left_face)
+            previously_deleted_faces = set()
+            for face in face_to_delete:  # edges to remove
+                if face not in previously_deleted_faces and face in face_idx:
+                    face_index = face_idx[face]
+                    output_file.write(f"df {face_index}\n")
+                    print("Deleted left face:", face)
+                    previously_deleted_faces.add(face)
+                elif face in previously_deleted_faces:
+                    print("Left face already deleted:", face)
                 else:
-                    print("Left face to delete not found:", left_face)
-
-                if right_face in face_idx:
-                    right_face_idx = face_idx.index(right_face)
-                    output_file.write(f"df {right_face_idx + 1}\n")
-                    face_idx.remove(right_face)
-                    print("Deleted right face:", right_face)
-                else:
-                    print("Right face to delete not found:", right_face)
+                    print("Left face to delete not found:", face)
 
             vertex_to_add = sorted(vertex_diffs.keys())
             for v in vertex_to_add:
@@ -133,6 +126,9 @@ def main():
                     if f in face_idx:
                         print("Face to add already exists, skipping:", f)
                         continue  # face already exists
+                    elif f in previously_deleted_faces:
+                        print("Adding a deleted face")
+                        previously_deleted_faces.remove(f)
                     else:
                         print("Adding face:", f)
                     
@@ -144,7 +140,7 @@ def main():
                         vertices_in_face.append(str(vertex_idx[v_face]))
                     
                     output_file.write("f " + " ".join(vertices_in_face) + "\n")
-                    face_idx.append(f)
+                    face_idx[f] = len(face_idx) + 1
                         
 
     print("Done.")
