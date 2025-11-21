@@ -46,6 +46,7 @@ class MeshTopology:
                     edges_to_remove[edge] = self.orientations[edge]
             
             return (vertex_connections_to_add, edges_to_remove)
+            
     # ----------------------------------------------------------------------
     # Constructors
     # ----------------------------------------------------------------------
