@@ -31,20 +31,39 @@ class MeshTopology:
         # - self is one step more compressed than previous_state
         # - self is included in previous_state, and there's more vertices in previous_state
         # - Missing edges in previous_state are edges to remove
-        # return (vertex_connections_to_add, edges_to_remove)
+        # return (vertex_connections_to_add, edges_to_remove)    
         def compression_difference(self, previous_state: "MeshTopology.State") -> Tuple[Dict, Dict]:
             vertex_connections_to_add = dict()
-            edges_to_remove = dict()
+            faces_to_remove = []
 
-            vertex_to_add = previous_state.vertex_connections.keys() - self.vertex_connections.keys()
+            # vertices that were added
+            vertex_to_add = set(previous_state.vertex_connections.keys()) - set(self.vertex_connections.keys())
             for v in vertex_to_add:
                 vertex_connections_to_add[v] = previous_state.vertex_connections[v]
 
-            for edge in self.orientations.keys().difference(previous_state.orientations.keys()):
-                if (edge[1], edge[0]) not in edges_to_remove:
-                    edges_to_remove[edge] = self.orientations[edge]
+            # edges that were deleted
+            difference_in_edges = set(self.orientations.keys()).difference(set(previous_state.orientations.keys()))
+            for edge in difference_in_edges:
+                if (edge[1], edge[0]) not in faces_to_remove:
+                    adjacent_vertices = self.orientations[edge]
+                    faces_to_remove.append(Face((edge[0], edge[1], adjacent_vertices[0])))
+                    faces_to_remove.append(Face((edge[1], edge[0], adjacent_vertices[1])))
+
+            # edges that were modified
+            common_edges = set(self.orientations.keys()).intersection(set(previous_state.orientations.keys()))
+            for edge in common_edges:
+                current_adjacent_vertices = self.orientations[edge]
+                previous_adjacent_vertices = previous_state.orientations[edge]
+                if  current_adjacent_vertices[0] is not None \
+                    and current_adjacent_vertices[0] != previous_adjacent_vertices[0]:
+                    faces_to_remove.append(Face((edge[0], edge[1], current_adjacent_vertices[0])))
+                
+                if  current_adjacent_vertices[1] is not None \
+                    and current_adjacent_vertices[1] != previous_adjacent_vertices[1]:
+                    faces_to_remove.append(Face((edge[1], edge[0], current_adjacent_vertices[1])))
             
-            return (vertex_connections_to_add, edges_to_remove)
+            return (vertex_connections_to_add, faces_to_remove)
+    
     # ----------------------------------------------------------------------
     # Constructors
     # ----------------------------------------------------------------------
